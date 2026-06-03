@@ -2182,7 +2182,7 @@
                             </div>
 
                             <!-- 评论内容 -->
-                            <div class="flex-1 min-w-0">
+                            <div class="flex-1 min-w-0 group/comment">
                                 <!-- 评论头部 -->
                                 <div class="flex items-center gap-2 mb-1.5">
                                     <span class="${isTopLevel ? 'text-sm' : 'text-xs'} font-bold text-zinc-800 dark:text-zinc-200">${comment.authorName}</span>
@@ -2190,7 +2190,7 @@
                                     ${comment.replyTo ? `<span class="text-[10px] text-zinc-400">回复 <span class="text-blue-500">@${comment.replyTo}</span></span>` : ''}
                                     <span class="text-[10px] text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
                                     ${canDelete ? `
-                                    <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="ml-auto p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100" title="删除">
+                                    <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="ml-auto p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover/comment:opacity-100" title="删除">
                                         <i data-lucide="trash-2" size="12"></i>
                                     </button>` : ''}
                                 </div>
