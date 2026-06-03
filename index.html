@@ -2469,33 +2469,55 @@
             }
         }
 
+        // 点赞防抖锁
+        const likeLocks = new Set();
+
         async function toggleLike(postId) {
             if (!currentUser) { showLoginModal(); return; }
+
+            // 防止重复点击
+            if (likeLocks.has(postId)) return;
+            likeLocks.add(postId);
+
             try {
                 const postRef = db.collection('itlab_posts').doc(postId);
 
                 // 使用事务确保数据一致性
                 await db.runTransaction(async (transaction) => {
                     const postDoc = await transaction.get(postRef);
-                    const likedBy = postDoc.data().likedBy || [];
+                    const postData = postDoc.data();
+                    const likedBy = postData.likedBy || [];
+                    const currentLikes = postData.likes || 0;
                     const isLiked = likedBy.includes(currentUser.uid);
 
+                    // 直接计算新的 likes 值，确保不会小于 0
+                    let newLikes;
+                    let newLikedBy;
+
                     if (isLiked) {
-                        transaction.update(postRef, {
-                            likes: firebase.firestore.FieldValue.increment(-1),
-                            likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
-                        });
+                        // 取消点赞
+                        newLikes = Math.max(0, currentLikes - 1);
+                        newLikedBy = likedBy.filter(uid => uid !== currentUser.uid);
                     } else {
-                        transaction.update(postRef, {
-                            likes: firebase.firestore.FieldValue.increment(1),
-                            likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-                        });
+                        // 点赞
+                        newLikes = currentLikes + 1;
+                        newLikedBy = [...likedBy, currentUser.uid];
                     }
+
+                    transaction.update(postRef, {
+                        likes: newLikes,
+                        likedBy: newLikedBy
+                    });
                 });
 
                 showPostDetail(postId);
                 loadPosts(true);
-            } catch (e) { console.error('Failed to toggle like:', e); }
+            } catch (e) {
+                console.error('Failed to toggle like:', e);
+            } finally {
+                // 释放锁
+                likeLocks.delete(postId);
+            }
         }
 
         async function submitComment() {
