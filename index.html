@@ -532,6 +532,13 @@
                             </div>
                         </label>
                         <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="post-permission" value="moderator" class="w-4 h-4 text-blue-500 focus:ring-blue-500">
+                            <div>
+                                <p class="text-sm font-bold">管理员和版主</p>
+                                <p class="text-xs text-zinc-400">只有管理员和版主可以发帖</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
                             <input type="radio" name="post-permission" value="admin" class="w-4 h-4 text-blue-500 focus:ring-blue-500">
                             <div>
                                 <p class="text-sm font-bold">仅管理员</p>
@@ -765,6 +772,69 @@
         </div>
     </main>
 
+    <!-- Chat Room Button (Fixed) -->
+    <button id="chat-toggle-btn" onclick="toggleChatRoom()" class="hidden fixed bottom-6 right-6 z-[90] w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-teal-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-110 transition-all flex items-center justify-center">
+        <i data-lucide="message-circle" size="24"></i>
+    </button>
+
+    <!-- Chat Room Modal -->
+    <div id="chat-room-modal" class="hidden fixed bottom-24 right-6 z-[95] w-96 max-w-[calc(100vw-3rem)] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-white/10 overflow-hidden animate-fade-in-up">
+        <!-- Chat Header -->
+        <div class="p-4 bg-gradient-to-r from-blue-500 to-teal-600 text-white flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                    <i data-lucide="message-circle" size="18"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm">ITLab 实时聊天</h3>
+                    <p class="text-[10px] opacity-80" id="chat-online-count">0 人在线</p>
+                </div>
+            </div>
+            <button onclick="toggleChatRoom()" class="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
+                <i data-lucide="x" size="18"></i>
+            </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="chat-messages" class="h-80 overflow-y-auto p-4 space-y-3">
+            <div class="text-center text-zinc-400 text-sm py-10">
+                <i data-lucide="loader-2" class="animate-spin inline-block mr-2"></i>
+                加载中...
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="p-3 border-t border-zinc-200 dark:border-white/10">
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" class="flex-1 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 text-sm" placeholder="输入消息..." maxlength="200">
+                <button onclick="sendChatMessage()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white text-sm font-bold hover:from-blue-600 hover:to-teal-700 transition-all">
+                    发送
+                </button>
+            </div>
+            <p class="text-[10px] text-zinc-400 mt-1.5 text-center">按 Enter 发送 · 最多200字</p>
+        </div>
+    </div>
+
+    <!-- Chat Access Denied Modal -->
+    <div id="chat-access-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+        <div class="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up">
+            <div class="p-6 border-b border-zinc-200 dark:border-white/10">
+                <h2 class="text-xl font-black">进入聊天室</h2>
+                <p class="text-xs text-zinc-500 mt-1">需要管理员授权或邀请码</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">邀请码</label>
+                    <input type="text" id="chat-invite-code" class="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 text-sm uppercase" placeholder="输入邀请码">
+                </div>
+                <div id="chat-access-error" class="hidden text-red-500 text-xs font-bold"></div>
+                <button onclick="verifyChatAccess()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white font-bold text-sm hover:from-blue-600 hover:to-teal-700 transition-all shadow-lg shadow-blue-500/25">
+                    验证并进入
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Post Detail Modal -->
     <div id="post-detail-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
         <div class="w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up max-h-[90vh] flex flex-col">
@@ -901,16 +971,28 @@
                     lastSeen: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
 
-                // 检查是否是 ITLab 社区管理员
-                try {
-                    const itlabUserDoc = await db.collection('itlab_users').doc(user.uid).get();
-                    if (itlabUserDoc.exists && itlabUserDoc.data().isAdmin) {
-                        document.getElementById('admin-link').classList.remove('hidden');
-                    }
-                } catch (e) {}
+                // 加载用户角色
+                await loadUserRoles();
+                if (checkIsModOrAdmin()) {
+                    document.getElementById('admin-link').classList.remove('hidden');
+                }
+
+                // 初始化聊天室
+                await initChatRoom();
             } else {
                 loginBtn.classList.remove('hidden');
                 userMenu.classList.add('hidden');
+                userRoles = { isAdmin: false, isModerator: false };
+                hasChatAccess = false;
+                document.getElementById('chat-toggle-btn').classList.add('hidden');
+                if (chatRoomOpen) {
+                    chatRoomOpen = false;
+                    document.getElementById('chat-room-modal').classList.add('hidden');
+                    if (chatUnsubscribe) {
+                        chatUnsubscribe();
+                        chatUnsubscribe = null;
+                    }
+                }
             }
         });
 
@@ -1216,6 +1298,9 @@
                 usersSnapshot.forEach(doc => {
                     const user = doc.data();
                     const isUserAdmin = user.isAdmin || false;
+                    const isUserMod = user.isModerator || false;
+                    const roleLabel = isUserAdmin ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">管理员</span>' :
+                                    isUserMod ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">版主</span>' : '';
                     html += `
                         <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
                             <div class="flex items-center gap-3">
@@ -1226,7 +1311,10 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
-                                ${isUserAdmin ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">管理员</span>' : ''}
+                                ${roleLabel}
+                                ${!isUserAdmin ? `<button onclick="toggleUserModerator('${doc.id}', ${isUserMod})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserMod ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'} hover:scale-[1.02] transition-all">
+                                    ${isUserMod ? '取消版主' : '设为版主'}
+                                </button>` : ''}
                                 <button onclick="toggleUserAdmin('${doc.id}', ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
                                     ${isUserAdmin ? '取消管理员' : '设为管理员'}
                                 </button>
@@ -1308,6 +1396,18 @@
             }
         }
 
+        async function toggleUserModerator(userId, currentIsMod) {
+            try {
+                await db.collection('itlab_users').doc(userId).update({
+                    isModerator: !currentIsMod,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                loadAdminSettings();
+            } catch (e) {
+                alert('更新失败: ' + e.message);
+            }
+        }
+
         async function saveAdminSettings() {
             const requireInvite = document.getElementById('setting-require-invite').checked;
             const postPermission = document.querySelector('input[name="post-permission"]:checked').value;
@@ -1329,6 +1429,89 @@
 
         function hideUserMenu() {
             document.getElementById('user-dropdown').classList.add('hidden');
+        }
+
+        // ========== 权限检查系统 ==========
+        let userRoles = { isAdmin: false, isModerator: false };
+
+        async function loadUserRoles() {
+            if (!currentUser) {
+                userRoles = { isAdmin: false, isModerator: false };
+                return;
+            }
+            try {
+                const userDoc = await db.collection('itlab_users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const data = userDoc.data();
+                    userRoles.isAdmin = data.isAdmin || false;
+                    userRoles.isModerator = data.isModerator || false;
+                }
+            } catch (e) {
+                console.warn('Failed to load user roles:', e);
+            }
+        }
+
+        function checkIsAdmin() {
+            return userRoles.isAdmin;
+        }
+
+        function checkIsModerator() {
+            return userRoles.isModerator;
+        }
+
+        function checkIsModOrAdmin() {
+            return userRoles.isAdmin || userRoles.isModerator;
+        }
+
+        function checkIsPostAuthor(post) {
+            return currentUser && post.authorId === currentUser.uid;
+        }
+
+        function canEditPost(post) {
+            return checkIsPostAuthor(post) || checkIsAdmin();
+        }
+
+        function canDeletePost(post) {
+            return checkIsPostAuthor(post) || checkIsModOrAdmin();
+        }
+
+        function canPinPost() {
+            return checkIsModOrAdmin();
+        }
+
+        function canFeaturePost() {
+            return checkIsModOrAdmin();
+        }
+
+        // ========== 帖子独立页面分享 ==========
+        function getShareUrl(postId) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            return `${baseUrl}?post=${postId}`;
+        }
+
+        function copyShareLink(postId) {
+            const url = getShareUrl(postId);
+            navigator.clipboard.writeText(url).then(() => {
+                alert('链接已复制到剪贴板！');
+            }).catch(() => {
+                // Fallback
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                alert('链接已复制到剪贴板！');
+            });
+        }
+
+        // 检查 URL 中是否有帖子 ID
+        async function checkUrlForPost() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = urlParams.get('post');
+            if (postId) {
+                await showPostDetail(postId);
+            }
         }
 
         function showNewPostModal() {
@@ -1408,51 +1591,78 @@
             if (!selectedCategory) { alert('请选择分类'); return; }
             if (!content) { alert('请输入内容'); return; }
 
-            // 检查发帖权限
-            try {
-                const settingsDoc = await db.collection('itlab_settings').doc('general').get();
-                if (settingsDoc.exists) {
-                    const settings = settingsDoc.data();
-                    const postPermission = settings.postPermission || 'all';
+            // 如果是编辑模式，跳过发帖权限检查
+            const isEditing = !!editingPostId;
 
-                    if (postPermission === 'admin') {
-                        // 检查是否是管理员
-                        const userDoc = await db.collection('itlab_users').doc(currentUser.uid).get();
-                        if (!userDoc.exists || !userDoc.data().isAdmin) {
-                            alert('只有管理员可以发帖');
-                            return;
+            if (!isEditing) {
+                // 检查发帖权限
+                try {
+                    const settingsDoc = await db.collection('itlab_settings').doc('general').get();
+                    if (settingsDoc.exists) {
+                        const settings = settingsDoc.data();
+                        const postPermission = settings.postPermission || 'all';
+
+                        switch (postPermission) {
+                            case 'admin':
+                                if (!checkIsAdmin()) {
+                                    alert('只有管理员可以发帖');
+                                    return;
+                                }
+                                break;
+                            case 'moderator':
+                                if (!checkIsModOrAdmin()) {
+                                    alert('只有管理员和版主可以发帖');
+                                    return;
+                                }
+                                break;
+                            case 'invite-only':
+                                // 暂时允许所有用户发帖
+                                break;
+                            case 'all':
+                            default:
+                                // 所有登录用户可发帖
+                                break;
                         }
-                    } else if (postPermission === 'invite-only') {
-                        // 检查是否使用邀请码注册（这里简化处理，实际可以检查用户注册方式）
-                        // 暂时允许所有用户发帖
                     }
+                } catch (e) {
+                    console.warn('Failed to check post permission:', e);
                 }
-            } catch (e) {
-                console.warn('Failed to check post permission:', e);
             }
 
             const submitBtn = document.getElementById('submit-btn');
             submitBtn.disabled = true;
-            submitBtn.textContent = '发布中...';
+            submitBtn.textContent = isEditing ? '保存中...' : '发布中...';
 
             try {
-                await db.collection('itlab_posts').add({
-                    title, content, category: selectedCategory, tags,
-                    authorId: currentUser.uid,
-                    authorName: currentUser.displayName || currentUser.email.split('@')[0],
-                    authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
-                    likes: 0, likedBy: [], commentCount: 0,
-                    isPinned: false, isFeatured: false,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                if (isEditing) {
+                    // 编辑模式：更新帖子
+                    await db.collection('itlab_posts').doc(editingPostId).update({
+                        title, content, category: selectedCategory, tags,
+                        lastEditedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        lastEditedBy: currentUser.uid
+                    });
+                    editingPostId = null;
+                    alert('帖子已更新');
+                } else {
+                    // 新建模式：创建帖子
+                    await db.collection('itlab_posts').add({
+                        title, content, category: selectedCategory, tags,
+                        authorId: currentUser.uid,
+                        authorName: currentUser.displayName || currentUser.email.split('@')[0],
+                        authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
+                        likes: 0, likedBy: [], commentCount: 0,
+                        isPinned: false, isFeatured: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
                 hideNewPostModal();
                 loadPosts(true);
             } catch (e) {
-                alert('发布失败: ' + e.message);
+                alert(isEditing ? '保存失败: ' + e.message : '发布失败: ' + e.message);
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '发布帖子';
+                submitBtn.textContent = isEditing ? '保存修改' : '发布帖子';
             }
         }
 
@@ -1682,16 +1892,44 @@
                         <div class="markdown-body p-6 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 mb-6">
                             ${marked.parse(post.content)}
                         </div>
-                        <div class="flex items-center gap-4 pb-6 border-b border-zinc-200 dark:border-white/10">
-                            <button onclick="toggleLike('${postId}')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
+                        <div class="flex items-center gap-3 flex-wrap pb-6 border-b border-zinc-200 dark:border-white/10">
+                            <button onclick="toggleLike('${postId}')" class="flex items-center gap-2 px-4 py-2 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
                                 <i data-lucide="heart" size="16" class="${isLiked ? 'fill-current' : ''}"></i>
-                                <span>${post.likes || 0} 点赞</span>
+                                <span>${post.likes || 0}</span>
                             </button>
                             <div class="flex items-center gap-2 text-sm text-zinc-400">
                                 <i data-lucide="message-square" size="16"></i>
-                                <span>${comments.length} 条评论</span>
+                                <span>${comments.length}</span>
                             </div>
+                            <div class="flex-1"></div>
+                            <button onclick="copyShareLink('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 text-xs font-bold hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" title="分享">
+                                <i data-lucide="share-2" size="14"></i>
+                                <span class="hidden sm:inline">分享</span>
+                            </button>
+                            ${canEditPost(post) ? `
+                            <button onclick="editPost('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all" title="编辑">
+                                <i data-lucide="edit" size="14"></i>
+                                <span class="hidden sm:inline">编辑</span>
+                            </button>` : ''}
+                            ${canDeletePost(post) ? `
+                            <button onclick="deletePost('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" title="删除">
+                                <i data-lucide="trash-2" size="14"></i>
+                                <span class="hidden sm:inline">删除</span>
+                            </button>` : ''}
+                            ${canPinPost() ? `
+                            <button onclick="togglePin('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isPinned ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="${post.isPinned ? '取消置顶' : '置顶'}">
+                                <i data-lucide="pin" size="14"></i>
+                            </button>` : ''}
+                            ${canFeaturePost() ? `
+                            <button onclick="toggleFeatured('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isFeatured ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-all" title="${post.isFeatured ? '取消精华' : '标记精华'}">
+                                <i data-lucide="star" size="14"></i>
+                            </button>` : ''}
                         </div>
+                        ${post.lastEditedAt ? `
+                        <div class="text-xs text-zinc-400 mt-3 flex items-center gap-1.5">
+                            <i data-lucide="clock" size="12"></i>
+                            最后修改于 ${new Date(post.lastEditedAt.toDate()).toLocaleString('zh-CN')}
+                        </div>` : ''}
                         <div class="mt-8 space-y-5" id="comments-list">
                             ${comments.length === 0 ? `
                                 <div class="text-center py-12">
@@ -1727,20 +1965,470 @@
 
         function hidePostDetail() { document.getElementById('post-detail-modal').classList.add('hidden'); currentPostId = null; }
 
+        // ========== 实时聊天室 ==========
+        let chatRoomOpen = false;
+        let chatUnsubscribe = null;
+        let hasChatAccess = false;
+
+        // 屏蔽词列表
+        const BLOCKED_WORDS = [
+            '傻逼', '操你', '他妈', '狗日', '混蛋', '王八蛋', 'sb', 'SB',
+            'fuck', 'shit', 'damn', 'ass', 'bitch', 'dick', 'pussy',
+            '色情', '赌博', '毒品', '枪支', '暴力', '诈骗',
+            '广告', '代购', '刷单', '兼职'
+        ];
+
+        // 检查消息是否包含屏蔽词
+        function containsBlockedWord(message) {
+            const lowerMessage = message.toLowerCase();
+            return BLOCKED_WORDS.some(word => lowerMessage.includes(word.toLowerCase()));
+        }
+
+        // 初始化聊天室（登录后调用）
+        async function initChatRoom() {
+            if (!currentUser) return;
+
+            // 显示聊天按钮
+            document.getElementById('chat-toggle-btn').classList.remove('hidden');
+
+            // 检查是否有聊天权限
+            await checkChatAccess();
+        }
+
+        // 检查聊天权限
+        async function checkChatAccess() {
+            if (!currentUser) return false;
+
+            try {
+                // 检查用户是否有聊天权限
+                const userDoc = await db.collection('itlab_users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    // 管理员和版主自动有权限
+                    if (userData.isAdmin || userData.isModerator) {
+                        hasChatAccess = true;
+                        return true;
+                    }
+                    // 检查是否已授权聊天
+                    if (userData.chatAuthorized) {
+                        hasChatAccess = true;
+                        return true;
+                    }
+                }
+
+                // 检查是否有聊天邀请码
+                const accessDoc = await db.collection('itlab_chat_access').doc(currentUser.uid).get();
+                if (accessDoc.exists) {
+                    hasChatAccess = true;
+                    // 更新用户文档
+                    await db.collection('itlab_users').doc(currentUser.uid).update({
+                        chatAuthorized: true
+                    });
+                    return true;
+                }
+
+                hasChatAccess = false;
+                return false;
+            } catch (e) {
+                console.warn('Failed to check chat access:', e);
+                hasChatAccess = false;
+                return false;
+            }
+        }
+
+        // 切换聊天室显示
+        async function toggleChatRoom() {
+            if (!currentUser) {
+                showLoginModal();
+                return;
+            }
+
+            if (!hasChatAccess) {
+                // 检查是否已经验证过
+                const access = await checkChatAccess();
+                if (!access) {
+                    document.getElementById('chat-access-modal').classList.remove('hidden');
+                    return;
+                }
+            }
+
+            chatRoomOpen = !chatRoomOpen;
+            const modal = document.getElementById('chat-room-modal');
+
+            if (chatRoomOpen) {
+                modal.classList.remove('hidden');
+                await loadChatMessages();
+                subscribeToChatMessages();
+                document.getElementById('chat-input').focus();
+            } else {
+                modal.classList.add('hidden');
+                if (chatUnsubscribe) {
+                    chatUnsubscribe();
+                    chatUnsubscribe = null;
+                }
+            }
+        }
+
+        // 验证聊天邀请码
+        async function verifyChatAccess() {
+            const codeInput = document.getElementById('chat-invite-code');
+            const code = codeInput.value.trim().toUpperCase();
+            const errorDiv = document.getElementById('chat-access-error');
+
+            if (!code) {
+                errorDiv.textContent = '请输入邀请码';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // 检查邀请码
+                const inviteDoc = await db.collection('itlab_invitations').doc(code).get();
+
+                if (!inviteDoc.exists) {
+                    errorDiv.textContent = '邀请码不存在';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                const inviteData = inviteDoc.data();
+
+                // 检查是否是聊天专用邀请码
+                if (inviteData.type !== 'chat') {
+                    errorDiv.textContent = '此邀请码不是聊天室邀请码';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                if (inviteData.isUsed) {
+                    errorDiv.textContent = '邀请码已被使用';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+
+                // 标记邀请码已使用
+                await db.collection('itlab_invitations').doc(code).update({
+                    isUsed: true,
+                    usedBy: currentUser.uid,
+                    usedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 授权用户聊天权限
+                await db.collection('itlab_chat_access').doc(currentUser.uid).set({
+                    userId: currentUser.uid,
+                    authorizedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    usedCode: code
+                });
+
+                // 更新用户文档
+                await db.collection('itlab_users').doc(currentUser.uid).update({
+                    chatAuthorized: true
+                });
+
+                hasChatAccess = true;
+                document.getElementById('chat-access-modal').classList.add('hidden');
+
+                // 打开聊天室
+                chatRoomOpen = true;
+                document.getElementById('chat-room-modal').classList.remove('hidden');
+                await loadChatMessages();
+                subscribeToChatMessages();
+
+            } catch (e) {
+                errorDiv.textContent = '验证失败: ' + e.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        // 加载聊天消息
+        async function loadChatMessages() {
+            const messagesDiv = document.getElementById('chat-messages');
+
+            try {
+                const snapshot = await db.collection('itlab_chat_messages')
+                    .orderBy('createdAt', 'desc')
+                    .limit(50)
+                    .get();
+
+                const messages = [];
+                snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+                messages.reverse();
+
+                if (messages.length === 0) {
+                    messagesDiv.innerHTML = `
+                        <div class="text-center text-zinc-400 text-sm py-10">
+                            <i data-lucide="message-circle" size="32" class="inline-block mb-2 opacity-50"></i>
+                            <p>暂无消息，快来聊天吧！</p>
+                        </div>
+                    `;
+                } else {
+                    messagesDiv.innerHTML = messages.map(msg => renderChatMessage(msg)).join('');
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+
+                lucide.createIcons();
+            } catch (e) {
+                console.error('Failed to load chat messages:', e);
+                messagesDiv.innerHTML = '<div class="text-center text-red-400 text-sm py-10">加载失败</div>';
+            }
+        }
+
+        // 订阅实时消息
+        function subscribeToChatMessages() {
+            if (chatUnsubscribe) chatUnsubscribe();
+
+            chatUnsubscribe = db.collection('itlab_chat_messages')
+                .orderBy('createdAt', 'desc')
+                .limit(50)
+                .onSnapshot(snapshot => {
+                    const messages = [];
+                    snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+                    messages.reverse();
+
+                    const messagesDiv = document.getElementById('chat-messages');
+                    messagesDiv.innerHTML = messages.map(msg => renderChatMessage(msg)).join('');
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    lucide.createIcons();
+                });
+        }
+
+        // 渲染单条消息
+        function renderChatMessage(msg) {
+            const isMe = currentUser && msg.userId === currentUser.uid;
+            const time = msg.createdAt ? new Date(msg.createdAt.toDate()).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+            return `
+                <div class="flex gap-2.5 ${isMe ? 'flex-row-reverse' : ''}">
+                    <img src="${msg.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.userName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-full flex-shrink-0">
+                    <div class="max-w-[70%]">
+                        <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
+                            <span class="text-xs font-bold text-zinc-600 dark:text-zinc-300">${msg.userName || '匿名'}</span>
+                            <span class="text-[10px] text-zinc-400">${time}</span>
+                        </div>
+                        <div class="px-3.5 py-2 rounded-2xl text-sm ${isMe ? 'bg-gradient-to-r from-blue-500 to-teal-600 text-white rounded-tr-md' : 'bg-zinc-100 dark:bg-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-md'}">
+                            ${escapeHtml(msg.content)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 发送消息
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+
+            if (!content) return;
+            if (!currentUser) {
+                showLoginModal();
+                return;
+            }
+
+            // 检查屏蔽词
+            if (containsBlockedWord(content)) {
+                alert('消息包含违规内容，请修改后重试');
+                return;
+            }
+
+            try {
+                await db.collection('itlab_chat_messages').add({
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || currentUser.email.split('@')[0],
+                    userAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
+                    content: content,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                input.value = '';
+            } catch (e) {
+                alert('发送失败: ' + e.message);
+            }
+        }
+
+        // Enter 键发送聊天消息
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                });
+            }
+        });
+
+        // ========== 帖子编辑功能 ==========
+        let editingPostId = null;
+
+        async function editPost(postId) {
+            try {
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (!postDoc.exists) { alert('帖子不存在'); return; }
+
+                const post = postDoc.data();
+                if (!canEditPost(post)) {
+                    alert('没有编辑权限');
+                    return;
+                }
+
+                editingPostId = postId;
+                document.getElementById('post-title').value = post.title;
+                document.getElementById('post-content').value = post.content;
+                document.getElementById('post-tags').value = (post.tags || []).join(', ');
+                selectedCategory = post.category;
+
+                // 更新分类按钮状态
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    if (btn.dataset.cat === post.category) {
+                        btn.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+                        btn.classList.remove('border-transparent');
+                    } else {
+                        btn.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/20');
+                        btn.classList.add('border-transparent');
+                    }
+                });
+
+                updatePreview();
+                hidePostDetail();
+                showNewPostModal();
+
+                // 修改提交按钮文本
+                document.getElementById('submit-btn').textContent = '保存修改';
+            } catch (e) {
+                alert('加载帖子失败: ' + e.message);
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('确定要删除这个帖子吗？此操作不可恢复！')) return;
+
+            try {
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (!postDoc.exists) { alert('帖子不存在'); return; }
+
+                const post = postDoc.data();
+                if (!canDeletePost(post)) {
+                    alert('没有删除权限');
+                    return;
+                }
+
+                // 删除帖子
+                await db.collection('itlab_posts').doc(postId).delete();
+
+                // 删除相关评论
+                const commentsSnapshot = await db.collection('itlab_comments').where('postId', '==', postId).get();
+                const batch = db.batch();
+                commentsSnapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+
+                hidePostDetail();
+                loadPosts(true);
+                alert('帖子已删除');
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+
+        async function togglePin(postId) {
+            try {
+                if (!canPinPost()) {
+                    alert('没有置顶权限');
+                    return;
+                }
+
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                await db.collection('itlab_posts').doc(postId).update({
+                    isPinned: !postDoc.data().isPinned
+                });
+
+                showPostDetail(postId);
+                loadPosts(true);
+            } catch (e) {
+                alert('操作失败: ' + e.message);
+            }
+        }
+
+        async function toggleFeatured(postId) {
+            try {
+                if (!canFeaturePost()) {
+                    alert('没有标记精华权限');
+                    return;
+                }
+
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                await db.collection('itlab_posts').doc(postId).update({
+                    isFeatured: !postDoc.data().isFeatured
+                });
+
+                showPostDetail(postId);
+                loadPosts(true);
+            } catch (e) {
+                alert('操作失败: ' + e.message);
+            }
+        }
+
+        // ========== 帖子独立页面分享 ==========
+        function getShareUrl(postId) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            return `${baseUrl}?post=${postId}`;
+        }
+
+        function copyShareLink(postId) {
+            const url = getShareUrl(postId);
+            navigator.clipboard.writeText(url).then(() => {
+                alert('链接已复制到剪贴板！');
+            }).catch(() => {
+                const input = document.createElement('input');
+                input.value = url;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                alert('链接已复制到剪贴板！');
+            });
+        }
+
+        // 检查 URL 中是否有帖子 ID
+        async function checkUrlForPost() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = urlParams.get('post');
+            if (postId) {
+                await showPostDetail(postId);
+            }
+        }
+
         async function toggleLike(postId) {
             if (!currentUser) { showLoginModal(); return; }
             try {
                 const postRef = db.collection('itlab_posts').doc(postId);
-                const postDoc = await postRef.get();
-                const post = postDoc.data();
-                const likedBy = post.likedBy || [];
-                const isLiked = likedBy.includes(currentUser.uid);
 
-                if (isLiked) {
-                    await postRef.update({ likes: firebase.firestore.FieldValue.increment(-1), likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
-                } else {
-                    await postRef.update({ likes: firebase.firestore.FieldValue.increment(1), likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
-                }
+                // 使用事务确保数据一致性
+                await db.runTransaction(async (transaction) => {
+                    const postDoc = await transaction.get(postRef);
+                    const likedBy = postDoc.data().likedBy || [];
+                    const isLiked = likedBy.includes(currentUser.uid);
+
+                    if (isLiked) {
+                        transaction.update(postRef, {
+                            likes: firebase.firestore.FieldValue.increment(-1),
+                            likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+                        });
+                    } else {
+                        transaction.update(postRef, {
+                            likes: firebase.firestore.FieldValue.increment(1),
+                            likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                        });
+                    }
+                });
+
                 showPostDetail(postId);
                 loadPosts(true);
             } catch (e) { console.error('Failed to toggle like:', e); }
@@ -1809,6 +2497,7 @@
             updateOnlineCount();
             setInterval(updateOnlineCount, 30000);
             initWeather(); // 初始化天气
+            checkUrlForPost(); // 检查 URL 中的帖子 ID
         });
 
         document.addEventListener('keydown', (e) => {
