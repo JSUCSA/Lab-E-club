@@ -849,22 +849,35 @@
         </div>
     </div>
 
-    <!-- Post Detail Modal -->
-    <div id="post-detail-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
-        <div class="w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up max-h-[90vh] flex flex-col">
-            <div class="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
-                <h2 id="detail-title" class="text-xl font-black truncate pr-4"></h2>
-                <button onclick="hidePostDetail()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all flex-shrink-0">
-                    <i data-lucide="x" size="20"></i>
+    <!-- Post Detail Full Page -->
+    <div id="post-detail-modal" class="hidden fixed inset-0 z-[100] bg-white dark:bg-zinc-950 overflow-y-auto">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200 dark:border-white/5">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                <button onclick="hidePostDetail()" class="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors group">
+                    <div class="p-2 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 group-hover:border-blue-500/50 transition-all">
+                        <i data-lucide="arrow-left" size="18"></i>
+                    </div>
+                    <span class="text-sm font-bold hidden sm:inline">返回</span>
                 </button>
+                <h2 id="detail-title" class="text-lg font-black truncate px-4"></h2>
+                <div class="w-20"></div>
             </div>
-            <div id="post-detail-content" class="flex-1 overflow-y-auto">
+        </header>
+
+        <!-- Content -->
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+            <div id="post-detail-content">
                 <!-- Content loaded dynamically -->
             </div>
-            <div class="p-4 border-t border-zinc-200 dark:border-white/10 flex-shrink-0 bg-zinc-50 dark:bg-white/[0.02]">
+        </div>
+
+        <!-- Comment Input (Fixed Bottom) -->
+        <div class="sticky bottom-0 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-t border-zinc-200 dark:border-white/5">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
                 <div class="flex gap-3">
-                    <input type="text" id="comment-input" class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm" placeholder="写下你的评论... (Enter 发送)">
-                    <button onclick="submitComment()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-purple-600 text-white text-sm font-bold hover:from-brand-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25">
+                    <input type="text" id="comment-input" class="flex-1 px-4 py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm" placeholder="写下你的评论... (Enter 发送)">
+                    <button onclick="submitComment()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white text-sm font-bold hover:from-blue-600 hover:to-teal-700 transition-all shadow-lg shadow-blue-500/25">
                         发送
                     </button>
                 </div>
@@ -1860,7 +1873,11 @@
             const modal = document.getElementById('post-detail-modal');
             const contentDiv = document.getElementById('post-detail-content');
 
+            // 显示全页面并禁用背景滚动
             modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            modal.scrollTop = 0;
+
             contentDiv.innerHTML = `
                 <div class="text-center py-20">
                     <div class="w-16 h-16 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
@@ -1983,7 +2000,11 @@
             }
         }
 
-        function hidePostDetail() { document.getElementById('post-detail-modal').classList.add('hidden'); currentPostId = null; }
+        function hidePostDetail() {
+            document.getElementById('post-detail-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+            currentPostId = null;
+        }
 
         // ========== 实时聊天室 ==========
         let chatRoomOpen = false;
