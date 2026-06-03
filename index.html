@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="zh" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>江苏大学ITLab技术社区 - SRE · 网安 · 运维</title>
+    <meta name="description" content="江苏大学ITLab技术社区留言板，专注SRE、网络安全、运维、开发等技术方向，打造高质量技术交流平台">
+
+    <!-- Tailwind CSS -->
+    <script src="assets/vendor/tailwind.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+            },
+            colors: {
+              brand: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                200: '#a7f3d0',
+                300: '#6ee7b7',
+                400: '#34d399',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+                800: '#065f46',
+                900: '#064e3b',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="assets/vendor/fonts.css">
+
+    <!-- Lucide Icons -->
+    <script src="assets/vendor/lucide.min.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Highlight.js for code highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 6px; height: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+      .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+      /* Animations */
+      @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+
+      .animate-fade-in-up { animation: fadeInUp 0.6s ease-out; }
+      .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+      .animate-slide-in { animation: slideInLeft 0.4s ease-out; }
+      .animate-float { animation: float 3s ease-in-out infinite; }
+
+      /* Gradient Animation */
+      .gradient-animate {
+        background-size: 200% 200%;
+        animation: gradient 3s ease infinite;
+      }
+
+      /* Shimmer Effect */
+      .shimmer {
+        position: relative;
+        overflow: hidden;
+      }
+      .shimmer::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        animation: shimmer 2s infinite;
+      }
+
+      /* Markdown Styles */
+      .markdown-body {
+        font-size: 14px;
+        line-height: 1.7;
+        color: inherit;
+      }
+      .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        font-weight: 700;
+        margin-top: 1.5em;
+        margin-bottom: 0.75em;
+      }
+      .markdown-body h1 { font-size: 1.6em; }
+      .markdown-body h2 { font-size: 1.35em; }
+      .markdown-body h3 { font-size: 1.15em; }
+      .markdown-body p { margin-bottom: 1em; }
+      .markdown-body ul, .markdown-body ol {
+        padding-left: 1.5em;
+        margin-bottom: 1em;
+      }
+      .markdown-body li { margin-bottom: 0.5em; }
+      .markdown-body code {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+        padding: 0.15em 0.4em;
+        border-radius: 6px;
+        font-size: 0.88em;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .dark .markdown-body code {
+        background: rgba(52, 211, 153, 0.15);
+        color: #6ee7b7;
+      }
+      .markdown-body pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 1.25em;
+        border-radius: 16px;
+        overflow-x: auto;
+        margin-bottom: 1.25em;
+        border: 1px solid rgba(255,255,255,0.05);
+      }
+      .markdown-body pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+        font-size: 0.85em;
+      }
+      .markdown-body blockquote {
+        border-left: 4px solid #10b981;
+        padding: 0.75em 1em;
+        margin: 0 0 1em 0;
+        background: rgba(16, 185, 129, 0.05);
+        border-radius: 0 12px 12px 0;
+      }
+      .dark .markdown-body blockquote {
+        background: rgba(16, 185, 129, 0.1);
+      }
+      .markdown-body a {
+        color: #059669;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+        transition: all 0.2s;
+      }
+      .markdown-body a:hover {
+        border-bottom-color: #10b981;
+      }
+      .markdown-body img {
+        max-width: 100%;
+        border-radius: 12px;
+        margin: 1em 0;
+      }
+      .markdown-body table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .markdown-body th, .markdown-body td {
+        border: 1px solid #e2e8f0;
+        padding: 0.75em;
+        text-align: left;
+      }
+      .dark .markdown-body th, .dark .markdown-body td {
+        border-color: #1e293b;
+      }
+      .markdown-body th {
+        background: #f8fafc;
+        font-weight: 600;
+      }
+      .dark .markdown-body th {
+        background: #1e293b;
+      }
+      .markdown-body hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        margin: 2em 0;
+      }
+      .dark .markdown-body hr {
+        background: linear-gradient(90deg, transparent, #334155, transparent);
+      }
+
+      /* Category Gradients */
+      .cat-sre { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+      .cat-security { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+      .cat-devops { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+      .cat-frontend { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+      .cat-backend { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+      .cat-ai { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+      .cat-other { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+
+      /* Tag Styles */
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        background: rgba(16, 185, 129, 0.08);
+        color: #059669;
+        border: 1px solid rgba(16, 185, 129, 0.15);
+        transition: all 0.2s;
+      }
+      .tag:hover {
+        background: rgba(16, 185, 129, 0.15);
+        transform: translateY(-1px);
+      }
+      .dark .tag {
+        background: rgba(52, 211, 153, 0.1);
+        color: #6ee7b7;
+        border-color: rgba(52, 211, 153, 0.2);
+      }
+
+      /* Glass Card */
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .dark .glass-card {
+        background: rgba(15, 23, 42, 0.8);
+        border-color: rgba(255, 255, 255, 0.05);
+      }
+
+      /* No scrollbar utility */
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      /* Text Gradient */
+      .text-gradient {
+        background: linear-gradient(135deg, #3b82f6, #10b981, #059669);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    </style>
+</head>
+<body class="bg-zinc-50 dark:bg-[#08080c] text-zinc-900 dark:text-white transition-colors duration-300 min-h-screen">
+
+    <!-- Animated Background -->
+    <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div class="absolute -top-40 -left-40 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[150px] animate-float"></div>
+        <div class="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-[120px] animate-float" style="animation-delay: 1.5s;"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-pink-500/3 rounded-full blur-[100px] animate-float" style="animation-delay: 3s;"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-card border-b border-zinc-200/50 dark:border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <a href="index.html" class="flex items-center gap-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors group">
+                        <i data-lucide="arrow-left" size="18" class="group-hover:-translate-x-1 transition-transform"></i>
+                        <span class="text-xs font-bold uppercase tracking-widest hidden sm:inline">返回主页</span>
+                    </a>
+                    <div class="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-2"></div>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 via-teal-500 to-green-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 gradient-animate">
+                                <i data-lucide="terminal" size="20"></i>
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#08080c] flex items-center justify-center">
+                                <div class="w-2 h-2 rounded-full bg-white"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-black tracking-tight">
+                                <span class="text-gradient">ITLab</span>
+                                <span class="text-zinc-900 dark:text-white"> 社区</span>
+                            </h1>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em]">SRE · 网安 · 运维 · 开发</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right side -->
+                <div class="flex items-center gap-3">
+                    <!-- Stats -->
+                    <div class="hidden lg:flex items-center gap-4 mr-2">
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400" id="online-count">-</span>
+                            <span class="text-[10px] text-emerald-500">在线</span>
+                        </div>
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                            <i data-lucide="message-square" size="12" class="text-blue-500"></i>
+                            <span class="text-xs font-bold text-blue-600 dark:text-blue-400" id="total-posts">-</span>
+                            <span class="text-[10px] text-blue-500">帖子</span>
+                        </div>
+                        <!-- Weather Widget -->
+                        <div id="weather-widget" class="hidden relative">
+                            <button onclick="toggleWeatherDropdown()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 hover:border-sky-400 transition-all">
+                                <i data-lucide="cloud-sun" size="14" class="text-sky-500"></i>
+                                <span class="text-xs font-bold text-sky-600 dark:text-sky-400" id="weather-temp">--°</span>
+                                <span class="text-[10px] text-sky-500 hidden xl:inline" id="weather-city">镇江</span>
+                            </button>
+                            <!-- Weather Dropdown -->
+                            <div id="weather-dropdown" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                <div class="p-4 bg-gradient-to-br from-sky-500 to-blue-600 text-white">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <div>
+                                            <p class="text-lg font-bold" id="dropdown-city">镇江市</p>
+                                            <p class="text-xs opacity-80" id="dropdown-province">江苏省</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-3xl font-bold" id="dropdown-temp">--°</p>
+                                            <p class="text-xs opacity-80" id="dropdown-text">加载中...</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs opacity-80">
+                                        <span id="dropdown-wind">-- --</span>
+                                        <span>湿度 <span id="dropdown-humidity">--%</span></span>
+                                    </div>
+                                </div>
+                                <div class="p-4 space-y-3">
+                                    <div class="grid grid-cols-2 gap-3 text-xs">
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="thermometer" size="14" class="text-orange-500"></i>
+                                            <span class="text-zinc-500">体感</span>
+                                            <span class="font-bold" id="dropdown-feels-like">--°</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="eye" size="14" class="text-blue-500"></i>
+                                            <span class="text-zinc-500">能见度</span>
+                                            <span class="font-bold" id="dropdown-vis">--km</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="gauge" size="14" class="text-purple-500"></i>
+                                            <span class="text-zinc-500">气压</span>
+                                            <span class="font-bold" id="dropdown-pressure">--hPa</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i data-lucide="droplets" size="14" class="text-cyan-500"></i>
+                                            <span class="text-zinc-500">降水</span>
+                                            <span class="font-bold" id="dropdown-precip">--mm</span>
+                                        </div>
+                                    </div>
+                                    <div class="pt-2 border-t border-zinc-200 dark:border-white/10">
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" id="weather-city-input" class="flex-1 px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-sky-500 text-xs" placeholder="输入城市名称" value="镇江">
+                                            <button onclick="fetchWeather()" class="px-3 py-1.5 rounded-lg bg-sky-500 text-white text-xs font-bold hover:bg-sky-600 transition-colors">
+                                                查询
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-zinc-400 text-center" id="weather-update-time">数据更新于 --</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()" class="p-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-white hover:border-brand-500/50 transition-all">
+                        <i data-lucide="sun-moon" size="18"></i>
+                    </button>
+
+                    <!-- User Menu -->
+                    <div id="user-section">
+                        <button id="login-btn" onclick="showLoginModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-purple-600 text-white text-xs font-bold hover:from-brand-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-brand-500/40 hover:scale-[1.02]">
+                            登录参与讨论
+                        </button>
+                        <div id="user-menu" class="hidden relative" onmouseenter="showUserMenu()" onmouseleave="hideUserMenuWithDelay()">
+                            <button class="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:border-blue-500/50 transition-all">
+                                <img id="user-avatar" class="w-7 h-7 rounded-lg" src="" alt="">
+                                <span id="user-name" class="text-xs font-bold hidden sm:inline">User</span>
+                                <i data-lucide="chevron-down" size="14" class="text-zinc-400"></i>
+                            </button>
+                            <div id="user-dropdown" class="hidden absolute right-0 top-full mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+                                <button onclick="showEditUsernameModal()" class="w-full flex items-center gap-2 px-4 py-3 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">
+                                    <i data-lucide="edit-3" size="14"></i> 修改用户名
+                                </button>
+                                <div id="admin-link" class="hidden">
+                                    <button onclick="showAdminSettingsModal()" class="w-full flex items-center gap-2 px-4 py-3 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-blue-500">
+                                        <i data-lucide="settings" size="14"></i> 社区设置
+                                    </button>
+                                    <a href="index.html" class="flex items-center gap-2 px-4 py-3 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-blue-500 border-t border-zinc-100 dark:border-white/5">
+                                        <i data-lucide="shield-check" size="14"></i> 主站管理后台
+                                    </a>
+                                </div>
+                                <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-3 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 transition-colors border-t border-zinc-100 dark:border-white/5">
+                                    <i data-lucide="log-out" size="14"></i> 退出登录
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+        <div class="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up">
+            <div class="relative p-8 text-center bg-gradient-to-br from-blue-500 via-teal-500 to-green-500">
+                <div class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="terminal" size="32" class="text-white"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white mb-1">欢迎加入 ITLab</h2>
+                <p class="text-sm text-white/80">江苏大学技术社区</p>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-zinc-500 text-center">使用 GitHub 账号登录，即可参与技术讨论</p>
+                <button onclick="githubLogin()" class="w-full py-3.5 rounded-xl bg-[#24292f] dark:bg-white/10 text-white font-bold text-sm hover:bg-[#2f363d] dark:hover:bg-white/20 transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:scale-[1.02]">
+                    <svg class="w-5 h-5" fill="white" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    使用 GitHub 登录
+                </button>
+                <div id="login-error" class="hidden text-red-500 text-xs font-bold text-center"></div>
+                <button onclick="hideLoginModal()" class="w-full py-2 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors">稍后再看</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Username Modal -->
+    <div id="edit-username-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+        <div class="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up">
+            <div class="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between">
+                <h2 class="text-xl font-black">修改用户名</h2>
+                <button onclick="hideEditUsernameModal()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all">
+                    <i data-lucide="x" size="20"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">当前用户名</label>
+                    <p id="current-username" class="text-sm text-zinc-500">-</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">新用户名</label>
+                    <input type="text" id="new-username" class="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm" placeholder="输入新用户名">
+                </div>
+                <div id="username-error" class="hidden text-red-500 text-xs font-bold"></div>
+                <button onclick="updateUsername()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white font-bold text-sm hover:from-blue-600 hover:to-teal-700 transition-all shadow-lg shadow-blue-500/25">
+                    保存修改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Settings Modal -->
+    <div id="admin-settings-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-black">社区设置</h2>
+                    <p class="text-xs text-zinc-500 mt-1">管理 ITLab 社区的各项设置</p>
+                </div>
+                <button onclick="hideAdminSettingsModal()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all">
+                    <i data-lucide="x" size="20"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-6 overflow-y-auto flex-1">
+                <!-- 邀请码设置 -->
+                <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-sm">邀请码机制</h3>
+                            <p class="text-xs text-zinc-400 mt-1">开启后，新用户注册需要输入邀请码</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-require-invite" class="sr-only peer">
+                            <div class="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+                    <div id="invite-code-management" class="hidden">
+                        <div class="flex gap-2">
+                            <input type="number" id="invite-count" value="10" min="1" max="50" class="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 text-sm">
+                            <button onclick="generateInviteCodes()" class="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-bold hover:bg-blue-600 transition-colors">
+                                生成邀请码
+                            </button>
+                        </div>
+                        <div id="generated-codes" class="mt-3 space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- 发帖权限设置 -->
+                <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                    <h3 class="font-bold text-sm mb-4">发帖权限</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="post-permission" value="all" class="w-4 h-4 text-blue-500 focus:ring-blue-500">
+                            <div>
+                                <p class="text-sm font-bold">所有登录用户</p>
+                                <p class="text-xs text-zinc-400">任何登录的用户都可以发帖</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="post-permission" value="invite-only" class="w-4 h-4 text-blue-500 focus:ring-blue-500">
+                            <div>
+                                <p class="text-sm font-bold">仅邀请码用户</p>
+                                <p class="text-xs text-zinc-400">只有使用邀请码注册的用户可以发帖</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" name="post-permission" value="admin" class="w-4 h-4 text-blue-500 focus:ring-blue-500">
+                            <div>
+                                <p class="text-sm font-bold">仅管理员</p>
+                                <p class="text-xs text-zinc-400">只有管理员可以发帖</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 用户管理 -->
+                <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                    <h3 class="font-bold text-sm mb-4">用户管理</h3>
+                    <div id="users-list" class="space-y-3 max-h-60 overflow-y-auto">
+                        <div class="text-center text-zinc-400 py-4">
+                            <i data-lucide="loader-2" class="animate-spin inline-block mr-2"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-zinc-200 dark:border-white/10 flex justify-end gap-3 flex-shrink-0">
+                <button onclick="hideAdminSettingsModal()" class="px-5 py-2.5 rounded-xl bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-white text-sm font-bold hover:bg-zinc-300 dark:hover:bg-white/15 transition-all">取消</button>
+                <button onclick="saveAdminSettings()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white text-sm font-bold hover:from-blue-600 hover:to-teal-700 transition-all shadow-lg shadow-blue-500/25">
+                    保存设置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Post Modal -->
+    <div id="new-post-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-brand-50 to-purple-50 dark:from-brand-900/20 dark:to-purple-900/20">
+                <div>
+                    <h2 class="text-xl font-black">发布新帖子</h2>
+                    <p class="text-xs text-zinc-500 mt-1">分享你的技术见解和经验</p>
+                </div>
+                <button onclick="hideNewPostModal()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-white/50 dark:hover:bg-white/10 transition-all">
+                    <i data-lucide="x" size="20"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-5 overflow-y-auto flex-1">
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">帖子标题</label>
+                    <input type="text" id="post-title" class="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm" placeholder="输入一个吸引人的标题...">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">选择分类</label>
+                    <div class="grid grid-cols-4 gap-2" id="post-categories">
+                        <button onclick="selectCategory('sre')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-emerald-500 transition-all" data-cat="sre">
+                            <i data-lucide="server" size="20" class="mx-auto mb-1 text-emerald-500"></i>
+                            <span class="text-xs font-bold">SRE</span>
+                        </button>
+                        <button onclick="selectCategory('security')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-red-500 transition-all" data-cat="security">
+                            <i data-lucide="shield" size="20" class="mx-auto mb-1 text-red-500"></i>
+                            <span class="text-xs font-bold">网安</span>
+                        </button>
+                        <button onclick="selectCategory('devops')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-amber-500 transition-all" data-cat="devops">
+                            <i data-lucide="settings" size="20" class="mx-auto mb-1 text-amber-500"></i>
+                            <span class="text-xs font-bold">运维</span>
+                        </button>
+                        <button onclick="selectCategory('frontend')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-blue-500 transition-all" data-cat="frontend">
+                            <i data-lucide="layout" size="20" class="mx-auto mb-1 text-blue-500"></i>
+                            <span class="text-xs font-bold">前端</span>
+                        </button>
+                        <button onclick="selectCategory('backend')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-violet-500 transition-all" data-cat="backend">
+                            <i data-lucide="database" size="20" class="mx-auto mb-1 text-violet-500"></i>
+                            <span class="text-xs font-bold">后端</span>
+                        </button>
+                        <button onclick="selectCategory('ai')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500 transition-all" data-cat="ai">
+                            <i data-lucide="brain" size="20" class="mx-auto mb-1 text-pink-500"></i>
+                            <span class="text-xs font-bold">AI</span>
+                        </button>
+                        <button onclick="selectCategory('other')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-gray-500 transition-all" data-cat="other">
+                            <i data-lucide="message-circle" size="20" class="mx-auto mb-1 text-gray-500"></i>
+                            <span class="text-xs font-bold">杂谈</span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">标签 <span class="font-normal text-zinc-400">（用逗号分隔，最多5个）</span></label>
+                    <input type="text" id="post-tags" class="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm" placeholder="例如: Linux, Docker, Kubernetes">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">内容 <span class="font-normal text-zinc-400">（支持 Markdown 语法）</span></label>
+                    <div class="flex gap-1.5 mb-2 p-1 bg-zinc-100 dark:bg-white/5 rounded-xl">
+                        <button onclick="insertMarkdown('bold')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="粗体"><b>B</b></button>
+                        <button onclick="insertMarkdown('italic')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="斜体"><i>I</i></button>
+                        <button onclick="insertMarkdown('code')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all font-mono text-xs" title="代码">&lt;/&gt;</button>
+                        <button onclick="insertMarkdown('codeblock')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all font-mono text-xs" title="代码块">```</button>
+                        <button onclick="insertMarkdown('link')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="链接"><i data-lucide="link" size="14"></i></button>
+                        <button onclick="insertMarkdown('image')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="图片"><i data-lucide="image" size="14"></i></button>
+                        <button onclick="insertMarkdown('list')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="列表"><i data-lucide="list" size="14"></i></button>
+                        <button onclick="insertMarkdown('quote')" class="p-2 rounded-lg hover:bg-white dark:hover:bg-white/10 transition-all" title="引用"><i data-lucide="quote" size="14"></i></button>
+                    </div>
+                    <textarea id="post-content" rows="12" class="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all resize-none font-mono text-sm leading-relaxed" placeholder="在这里输入内容...&#10;&#10;支持 Markdown 语法：&#10;# 标题&#10;**粗体** *斜体*&#10;`代码` ```代码块```&#10;- 列表项&#10;> 引用&#10;[链接](url) ![图片](url)"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">预览</label>
+                    <div id="post-preview" class="p-5 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 markdown-body min-h-[120px]">
+                        <p class="text-zinc-400 text-sm text-center py-8">开始输入内容后这里会显示预览...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center flex-shrink-0 bg-zinc-50 dark:bg-white/[0.02]">
+                <p class="text-xs text-zinc-400">发布后可在评论区补充说明</p>
+                <div class="flex gap-3">
+                    <button onclick="hideNewPostModal()" class="px-5 py-2.5 rounded-xl bg-zinc-200 dark:bg-white/10 text-zinc-700 dark:text-white text-sm font-bold hover:bg-zinc-300 dark:hover:bg-white/15 transition-all">取消</button>
+                    <button onclick="submitPost()" id="submit-btn" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-purple-600 text-white text-sm font-bold hover:from-brand-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-brand-500/40">
+                        发布帖子
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <!-- Hero Section -->
+        <div class="relative mb-10 p-8 md:p-12 rounded-3xl bg-gradient-to-br from-blue-500 via-teal-500 to-green-500 overflow-hidden shimmer">
+            <div class="absolute inset-0 bg-black/10"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
+            <div class="relative z-10 text-center text-white">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm text-sm font-bold mb-4">
+                    <i data-lucide="zap" size="14"></i>
+                    <span>江苏大学 ITLab 技术社区</span>
+                </div>
+                <h2 class="text-3xl md:text-5xl font-black mb-4">
+                    分享技术 · 交流成长
+                </h2>
+                <p class="text-lg text-white/80 max-w-2xl mx-auto mb-8">
+                    这里是 ITLab 的技术交流平台，专注 SRE、网络安全、运维、开发等方向。<br>
+                    分享你的经验，解答他人疑惑，一起进步。
+                </p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button onclick="showNewPostModal()" class="px-6 py-3 rounded-xl bg-white text-brand-600 font-bold hover:bg-white/90 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02]">
+                        <i data-lucide="plus" size="16" class="inline mr-2"></i>
+                        发布帖子
+                    </button>
+                    <button onclick="document.getElementById('posts-section').scrollIntoView({behavior: 'smooth'})" class="px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm text-white font-bold hover:bg-white/30 transition-all">
+                        <i data-lucide="arrow-down" size="16" class="inline mr-2"></i>
+                        浏览帖子
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-10">
+            <button onclick="filterByCategory('all')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-brand-500 shadow-lg shadow-brand-500/10 text-center transition-all hover:scale-[1.02]" data-cat="all">
+                <div class="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="grid-3x3" size="20" class="text-brand-500"></i>
+                </div>
+                <span class="text-xs font-bold text-brand-600 dark:text-brand-400">全部</span>
+            </button>
+            <button onclick="filterByCategory('sre')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-emerald-500 shadow-sm hover:shadow-lg hover:shadow-emerald-500/10 text-center transition-all hover:scale-[1.02]" data-cat="sre">
+                <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="server" size="20" class="text-emerald-500"></i>
+                </div>
+                <span class="text-xs font-bold">SRE</span>
+            </button>
+            <button onclick="filterByCategory('security')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-red-500 shadow-sm hover:shadow-lg hover:shadow-red-500/10 text-center transition-all hover:scale-[1.02]" data-cat="security">
+                <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="shield" size="20" class="text-red-500"></i>
+                </div>
+                <span class="text-xs font-bold">网安</span>
+            </button>
+            <button onclick="filterByCategory('devops')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-amber-500 shadow-sm hover:shadow-lg hover:shadow-amber-500/10 text-center transition-all hover:scale-[1.02]" data-cat="devops">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="settings" size="20" class="text-amber-500"></i>
+                </div>
+                <span class="text-xs font-bold">运维</span>
+            </button>
+            <button onclick="filterByCategory('frontend')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg hover:shadow-blue-500/10 text-center transition-all hover:scale-[1.02]" data-cat="frontend">
+                <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="layout" size="20" class="text-blue-500"></i>
+                </div>
+                <span class="text-xs font-bold">前端</span>
+            </button>
+            <button onclick="filterByCategory('backend')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-violet-500 shadow-sm hover:shadow-lg hover:shadow-violet-500/10 text-center transition-all hover:scale-[1.02]" data-cat="backend">
+                <div class="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="database" size="20" class="text-violet-500"></i>
+                </div>
+                <span class="text-xs font-bold">后端</span>
+            </button>
+            <button onclick="filterByCategory('ai')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-pink-500 shadow-sm hover:shadow-lg hover:shadow-pink-500/10 text-center transition-all hover:scale-[1.02]" data-cat="ai">
+                <div class="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mx-auto mb-2">
+                    <i data-lucide="brain" size="20" class="text-pink-500"></i>
+                </div>
+                <span class="text-xs font-bold">AI</span>
+            </button>
+        </div>
+
+        <!-- Toolbar -->
+        <div id="posts-section" class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <h3 class="text-lg font-black">最新帖子</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="sortPosts('newest')" class="sort-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400" data-sort="newest">最新</button>
+                    <button onclick="sortPosts('popular')" class="sort-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" data-sort="popular">最热</button>
+                    <button onclick="sortPosts('active')" class="sort-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" data-sort="active">活跃</button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <div class="relative flex-1 sm:flex-none">
+                    <input type="text" id="search-input" onkeyup="searchPosts()" class="w-full sm:w-64 pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm" placeholder="搜索帖子、标签...">
+                    <i data-lucide="search" size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400"></i>
+                </div>
+                <button onclick="showNewPostModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-purple-600 text-white text-xs font-bold hover:from-brand-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25 hover:shadow-brand-500/40 flex items-center gap-2 flex-shrink-0">
+                    <i data-lucide="plus" size="14"></i>
+                    发帖
+                </button>
+            </div>
+        </div>
+
+        <!-- Posts List -->
+        <div id="posts-list" class="space-y-4">
+            <div class="text-center py-20">
+                <div class="w-16 h-16 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <i data-lucide="loader-2" class="animate-spin text-brand-500" size="24"></i>
+                </div>
+                <p class="text-zinc-400 text-sm">正在加载帖子...</p>
+            </div>
+        </div>
+
+        <!-- Load More -->
+        <div id="load-more" class="hidden text-center mt-10">
+            <button onclick="loadMorePosts()" class="px-8 py-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold hover:bg-zinc-50 dark:hover:bg-white/10 transition-all shadow-sm hover:shadow-md">
+                加载更多帖子
+            </button>
+        </div>
+    </main>
+
+    <!-- Post Detail Modal -->
+    <div id="post-detail-modal" class="hidden fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4 py-8">
+        <div class="w-full max-w-4xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10 animate-fade-in-up max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between flex-shrink-0">
+                <h2 id="detail-title" class="text-xl font-black truncate pr-4"></h2>
+                <button onclick="hidePostDetail()" class="p-2 rounded-xl text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all flex-shrink-0">
+                    <i data-lucide="x" size="20"></i>
+                </button>
+            </div>
+            <div id="post-detail-content" class="flex-1 overflow-y-auto">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="p-4 border-t border-zinc-200 dark:border-white/10 flex-shrink-0 bg-zinc-50 dark:bg-white/[0.02]">
+                <div class="flex gap-3">
+                    <input type="text" id="comment-input" class="flex-1 px-4 py-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all text-sm" placeholder="写下你的评论... (Enter 发送)">
+                    <button onclick="submitComment()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-500 to-purple-600 text-white text-sm font-bold hover:from-brand-600 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/25">
+                        发送
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-10 border-t border-zinc-200 dark:border-white/5 bg-white dark:bg-white/[0.02]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-white">
+                        <i data-lucide="terminal" size="14"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold">江苏大学 ITLab 技术社区</p>
+                        <p class="text-xs text-zinc-400">SRE · 网安 · 运维 · 开发</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-6 text-xs text-zinc-400">
+                    <a href="index.html" class="hover:text-brand-500 transition-colors">CMItool 主页</a>
+                    <a href="https://github.com/cmijohnson/CMItool-gh-pages" target="_blank" class="hover:text-brand-500 transition-colors">GitHub</a>
+                    <span>© 2025 ITLab · CMI Team</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Firebase Config -->
+    <script src="assets/js/firebase-config.js"></script>
+
+    <!-- App Script -->
+    <script>
+        // ... (same JavaScript as before, keeping all the functionality)
+        // Global State
+        let currentUser = null;
+        let currentFilter = 'all';
+        let currentSort = 'newest';
+        let selectedCategory = null;
+        let currentPostId = null;
+        let lastDoc = null;
+        let isLoading = false;
+        const POSTS_PER_PAGE = 20;
+
+        const CATEGORIES = {
+            sre: { name: 'SRE', color: 'emerald', icon: 'server' },
+            security: { name: '网安', color: 'red', icon: 'shield' },
+            devops: { name: '运维', color: 'amber', icon: 'settings' },
+            frontend: { name: '前端', color: 'blue', icon: 'layout' },
+            backend: { name: '后端', color: 'violet', icon: 'database' },
+            ai: { name: 'AI', color: 'pink', icon: 'brain' },
+            other: { name: '杂谈', color: 'gray', icon: 'message-circle' }
+        };
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        function showLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
+        function hideLoginModal() { document.getElementById('login-modal').classList.add('hidden'); document.getElementById('login-error').classList.add('hidden'); }
+
+        async function githubLogin() {
+            const provider = new firebase.auth.GithubAuthProvider();
+            try {
+                await auth.signInWithPopup(provider);
+                hideLoginModal();
+            } catch (error) {
+                console.error('Login failed:', error);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    const errorDiv = document.getElementById('login-error');
+                    errorDiv.textContent = '登录失败: ' + error.message;
+                    errorDiv.classList.remove('hidden');
+                }
+            }
+        }
+
+        async function logout() { try { await auth.signOut(); } catch (e) { console.error('Logout failed:', e); } }
+
+        let userMenuTimeout = null;
+        function showUserMenu() {
+            if (userMenuTimeout) { clearTimeout(userMenuTimeout); userMenuTimeout = null; }
+            document.getElementById('user-dropdown').classList.remove('hidden');
+        }
+        function hideUserMenuWithDelay() {
+            userMenuTimeout = setTimeout(() => { document.getElementById('user-dropdown').classList.add('hidden'); }, 300);
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            currentUser = user;
+            const loginBtn = document.getElementById('login-btn');
+            const userMenu = document.getElementById('user-menu');
+
+            if (user) {
+                loginBtn.classList.add('hidden');
+                userMenu.classList.remove('hidden');
+
+                const avatar = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email)}&background=10b981&color=fff`;
+                document.getElementById('user-avatar').src = avatar;
+                document.getElementById('user-name').textContent = user.displayName || user.email.split('@')[0];
+
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists && userDoc.data().role === 'admin') {
+                        document.getElementById('admin-link').classList.remove('hidden');
+                    }
+                } catch (e) {}
+
+                await db.collection('itlab_users').doc(user.uid).set({
+                    displayName: user.displayName || user.email.split('@')[0],
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                // 检查是否是 ITLab 社区管理员
+                try {
+                    const itlabUserDoc = await db.collection('itlab_users').doc(user.uid).get();
+                    if (itlabUserDoc.exists && itlabUserDoc.data().isAdmin) {
+                        document.getElementById('admin-link').classList.remove('hidden');
+                    }
+                } catch (e) {}
+            } else {
+                loginBtn.classList.remove('hidden');
+                userMenu.classList.add('hidden');
+            }
+        });
+
+        // ========== 用户名修改 ==========
+        function showEditUsernameModal() {
+            if (!currentUser) { showLoginModal(); return; }
+            document.getElementById('edit-username-modal').classList.remove('hidden');
+            document.getElementById('current-username').textContent = currentUser.displayName || currentUser.email.split('@')[0];
+            document.getElementById('new-username').value = '';
+            document.getElementById('username-error').classList.add('hidden');
+            hideUserMenu();
+        }
+
+        function hideEditUsernameModal() {
+            document.getElementById('edit-username-modal').classList.add('hidden');
+        }
+
+        async function updateUsername() {
+            const newUsername = document.getElementById('new-username').value.trim();
+            const errorDiv = document.getElementById('username-error');
+
+            if (!newUsername) {
+                errorDiv.textContent = '请输入新用户名';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (newUsername.length < 2 || newUsername.length > 20) {
+                errorDiv.textContent = '用户名长度需要在 2-20 个字符之间';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // 更新 Firebase Auth 用户资料
+                await currentUser.updateProfile({ displayName: newUsername });
+
+                // 更新 Firestore 用户文档
+                await db.collection('itlab_users').doc(currentUser.uid).update({
+                    displayName: newUsername,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 更新 UI
+                document.getElementById('user-name').textContent = newUsername;
+
+                hideEditUsernameModal();
+                alert('用户名修改成功！');
+            } catch (e) {
+                errorDiv.textContent = '修改失败: ' + e.message;
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        // ========== 天气功能 ==========
+        // 使用免费的 wttr.in API，无需 API key
+        const WTTR_API = 'https://wttr.in';
+
+        let weatherDropdownOpen = false;
+        let weatherCache = null;
+        let weatherCacheTime = null;
+        const WEATHER_CACHE_DURATION = 60 * 60 * 1000; // 1小时缓存
+
+        // 初始化天气功能
+        async function initWeather() {
+            document.getElementById('weather-widget').classList.remove('hidden');
+
+            // 从本地缓存加载
+            const cached = localStorage.getItem('itlab_weather');
+            if (cached) {
+                try {
+                    const { data, time, city } = JSON.parse(cached);
+                    const age = Date.now() - time;
+                    if (age < WEATHER_CACHE_DURATION) {
+                        weatherCache = data;
+                        weatherCacheTime = time;
+                        updateWeatherUI(data, city);
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            await fetchWeather();
+        }
+
+        async function fetchWeather() {
+            const cityInput = document.getElementById('weather-city-input');
+            const city = cityInput ? cityInput.value.trim() || '镇江' : '镇江';
+
+            // 检查本地缓存
+            if (weatherCache && weatherCacheTime) {
+                const age = Date.now() - weatherCacheTime;
+                if (age < WEATHER_CACHE_DURATION) {
+                    updateWeatherUI(weatherCache, city);
+                    return;
+                }
+            }
+
+            try {
+                // 使用 wttr.in JSON API
+                const response = await fetch(`${WTTR_API}/${encodeURIComponent(city)}?format=j1`, {
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // 转换数据格式
+                const weatherData = {
+                    city: city,
+                    temp: data.current_condition[0].temp_C,
+                    feelsLike: data.current_condition[0].FeelsLikeC,
+                    text: data.current_condition[0].lang_zh?.[0]?.value || data.current_condition[0].weatherDesc[0].value,
+                    humidity: data.current_condition[0].humidity,
+                    windDir: data.current_condition[0].windDir16Point,
+                    windSpeed: data.current_condition[0].windspeedKmph,
+                    vis: data.current_condition[0].visibility,
+                    pressure: data.current_condition[0].pressure,
+                    precip: data.current_condition[0].precipMM,
+                    weatherCode: data.current_condition[0].weatherCode,
+                };
+
+                // 更新缓存
+                weatherCache = weatherData;
+                weatherCacheTime = Date.now();
+
+                localStorage.setItem('itlab_weather', JSON.stringify({
+                    data: weatherData,
+                    time: Date.now(),
+                    city: city,
+                }));
+
+                updateWeatherUI(weatherData, city);
+            } catch (e) {
+                console.error('获取天气数据失败:', e);
+                // 如果失败，尝试使用默认数据
+                if (!weatherCache) {
+                    updateWeatherUI(getDefaultWeatherData(city), city);
+                }
+            }
+        }
+
+        function getDefaultWeatherData(city) {
+            return {
+                city: city,
+                temp: '--',
+                feelsLike: '--',
+                text: '暂无数据',
+                humidity: '--',
+                windDir: '--',
+                windSpeed: '--',
+                vis: '--',
+                pressure: '--',
+                precip: '--',
+                weatherCode: '999',
+            };
+        }
+
+        function updateWeatherUI(data, city) {
+            // Header 小组件
+            document.getElementById('weather-temp').textContent = `${data.temp}°`;
+            document.getElementById('weather-city').textContent = city;
+
+            // 下拉面板
+            document.getElementById('dropdown-city').textContent = city;
+            document.getElementById('dropdown-province').textContent = getProvinceByCity(city);
+            document.getElementById('dropdown-temp').textContent = `${data.temp}°`;
+            document.getElementById('dropdown-text').textContent = data.text;
+            document.getElementById('dropdown-wind').textContent = `${data.windDir} ${data.windSpeed}km/h`;
+            document.getElementById('dropdown-humidity').textContent = `${data.humidity}%`;
+            document.getElementById('dropdown-feels-like').textContent = `${data.feelsLike}°`;
+            document.getElementById('dropdown-vis').textContent = `${data.vis}km`;
+            document.getElementById('dropdown-pressure').textContent = `${data.pressure}hPa`;
+            document.getElementById('dropdown-precip').textContent = `${data.precip}mm`;
+
+            // 更新时间
+            const now = new Date();
+            document.getElementById('weather-update-time').textContent = `数据更新于 ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            // 更新图标
+            updateWeatherIcon(data.weatherCode);
+            lucide.createIcons();
+        }
+
+        function getProvinceByCity(city) {
+            const cityProvinceMap = {
+                '镇江': '江苏省', '南京': '江苏省', '苏州': '江苏省', '无锡': '江苏省',
+                '常州': '江苏省', '扬州': '江苏省', '徐州': '江苏省', '连云港': '江苏省',
+                '上海': '上海市', '北京': '北京市', '天津': '天津市', '重庆': '重庆市',
+                '杭州': '浙江省', '宁波': '浙江省', '温州': '浙江省',
+                '合肥': '安徽省', '芜湖': '安徽省',
+                '广州': '广东省', '深圳': '广东省', '东莞': '广东省',
+                '武汉': '湖北省', '长沙': '湖南省', '南昌': '江西省',
+                '成都': '四川省', '重庆': '重庆市', '西安': '陕西省',
+                '郑州': '河南省', '济南': '山东省', '青岛': '山东省',
+                '福州': '福建省', '厦门': '福建省',
+                '昆明': '云南省', '贵阳': '贵州省', '南宁': '广西',
+                '哈尔滨': '黑龙江省', '长春': '吉林省', '沈阳': '辽宁省',
+                '太原': '山西省', '石家庄': '河北省', '呼和浩特': '内蒙古',
+                '兰州': '甘肃省', '银川': '宁夏', '西宁': '青海省',
+                '乌鲁木齐': '新疆', '拉萨': '西藏', '海口': '海南省',
+            };
+            return cityProvinceMap[city] || '';
+        }
+
+        function updateWeatherIcon(weatherCode) {
+            const iconElement = document.querySelector('#weather-widget > button > i');
+            if (!iconElement) return;
+
+            // wttr.in 天气代码映射
+            const code = parseInt(weatherCode);
+            let iconName = 'cloud-sun';
+
+            if (code === 113) iconName = 'sun';                    // 晴
+            else if (code === 116) iconName = 'cloud-sun';          // 多云
+            else if (code === 119 || code === 122) iconName = 'cloud'; // 阴
+            else if (code >= 176 && code <= 263) iconName = 'cloud-drizzle'; // 小雨
+            else if (code >= 266 && code <= 314) iconName = 'cloud-rain';    // 雨
+            else if (code >= 317 && code <= 395) iconName = 'cloud-snow';    // 雪
+            else if (code >= 386 && code <= 392) iconName = 'cloud-lightning'; // 雷雨
+            else if (code >= 248 && code <= 260) iconName = 'cloud-fog';     // 雾
+            else if (code === 143 || code === 248) iconName = 'cloud-fog';   // 霾
+
+            iconElement.setAttribute('data-lucide', iconName);
+        }
+
+        function toggleWeatherDropdown() {
+            weatherDropdownOpen = !weatherDropdownOpen;
+            const dropdown = document.getElementById('weather-dropdown');
+            if (weatherDropdownOpen) {
+                dropdown.classList.remove('hidden');
+                dropdown.classList.add('animate-fade-in-up');
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        }
+
+        // 点击外部关闭天气下拉菜单
+        document.addEventListener('click', (e) => {
+            const widget = document.getElementById('weather-widget');
+            if (widget && !widget.contains(e.target)) {
+                weatherDropdownOpen = false;
+                document.getElementById('weather-dropdown').classList.add('hidden');
+            }
+        });
+
+        // Enter 键查询天气
+        document.addEventListener('DOMContentLoaded', () => {
+            const cityInput = document.getElementById('weather-city-input');
+            if (cityInput) {
+                cityInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        fetchWeather();
+                    }
+                });
+            }
+        });
+
+        // ========== 管理员设置 ==========
+        let isAdmin = false;
+
+        function showAdminSettingsModal() {
+            if (!currentUser) { showLoginModal(); return; }
+            document.getElementById('admin-settings-modal').classList.remove('hidden');
+            hideUserMenu();
+            loadAdminSettings();
+        }
+
+        function hideAdminSettingsModal() {
+            document.getElementById('admin-settings-modal').classList.add('hidden');
+        }
+
+        async function loadAdminSettings() {
+            try {
+                // 加载设置
+                const settingsDoc = await db.collection('itlab_settings').doc('general').get();
+                if (settingsDoc.exists) {
+                    const settings = settingsDoc.data();
+                    document.getElementById('setting-require-invite').checked = settings.requireInviteCode || false;
+                    document.querySelector(`input[name="post-permission"][value="${settings.postPermission || 'all'}"]`).checked = true;
+
+                    if (settings.requireInviteCode) {
+                        document.getElementById('invite-code-management').classList.remove('hidden');
+                    }
+                }
+
+                // 加载用户列表
+                const usersSnapshot = await db.collection('itlab_users').orderBy('lastSeen', 'desc').limit(50).get();
+                const usersList = document.getElementById('users-list');
+
+                if (usersSnapshot.empty) {
+                    usersList.innerHTML = '<div class="text-center text-zinc-400 py-4 text-sm">暂无用户</div>';
+                    return;
+                }
+
+                let html = '';
+                usersSnapshot.forEach(doc => {
+                    const user = doc.data();
+                    const isUserAdmin = user.isAdmin || false;
+                    html += `
+                        <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
+                            <div class="flex items-center gap-3">
+                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-lg">
+                                <div>
+                                    <p class="text-sm font-bold">${user.displayName || '-'}</p>
+                                    <p class="text-xs text-zinc-400">${user.email || '-'}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${isUserAdmin ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">管理员</span>' : ''}
+                                <button onclick="toggleUserAdmin('${doc.id}', ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
+                                    ${isUserAdmin ? '取消管理员' : '设为管理员'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                usersList.innerHTML = html;
+                lucide.createIcons();
+            } catch (e) {
+                console.error('Failed to load admin settings:', e);
+                alert('加载设置失败: ' + e.message);
+            }
+        }
+
+        // 邀请码开关事件
+        document.getElementById('setting-require-invite').addEventListener('change', (e) => {
+            const inviteManagement = document.getElementById('invite-code-management');
+            if (e.target.checked) {
+                inviteManagement.classList.remove('hidden');
+            } else {
+                inviteManagement.classList.add('hidden');
+            }
+        });
+
+        async function generateInviteCodes() {
+            const count = parseInt(document.getElementById('invite-count').value) || 10;
+            const codesContainer = document.getElementById('generated-codes');
+
+            try {
+                const codes = [];
+                const batch = db.batch();
+
+                for (let i = 0; i < count; i++) {
+                    const code = generateRandomCode(8);
+                    const ref = db.collection('itlab_invitations').doc(code);
+                    batch.set(ref, {
+                        code,
+                        isUsed: false,
+                        createdBy: currentUser.uid,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    codes.push(code);
+                }
+
+                await batch.commit();
+
+                codesContainer.innerHTML = `
+                    <div class="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                        <p class="text-xs font-bold text-green-600 dark:text-green-400 mb-2">成功生成 ${count} 个邀请码：</p>
+                        <div class="flex flex-wrap gap-2">
+                            ${codes.map(code => `<code class="px-2 py-1 rounded bg-white dark:bg-white/10 text-xs font-mono">${code}</code>`).join('')}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                codesContainer.innerHTML = `<div class="text-red-500 text-xs">生成失败: ${e.message}</div>`;
+            }
+        }
+
+        function generateRandomCode(length) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        async function toggleUserAdmin(userId, currentIsAdmin) {
+            try {
+                await db.collection('itlab_users').doc(userId).update({
+                    isAdmin: !currentIsAdmin,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                loadAdminSettings();
+            } catch (e) {
+                alert('更新失败: ' + e.message);
+            }
+        }
+
+        async function saveAdminSettings() {
+            const requireInvite = document.getElementById('setting-require-invite').checked;
+            const postPermission = document.querySelector('input[name="post-permission"]:checked').value;
+
+            try {
+                await db.collection('itlab_settings').doc('general').set({
+                    requireInviteCode: requireInvite,
+                    postPermission,
+                    updatedBy: currentUser.uid,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                hideAdminSettingsModal();
+                alert('设置保存成功！');
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
+        function hideUserMenu() {
+            document.getElementById('user-dropdown').classList.add('hidden');
+        }
+
+        function showNewPostModal() {
+            if (!currentUser) { showLoginModal(); return; }
+            document.getElementById('new-post-modal').classList.remove('hidden');
+            document.getElementById('post-title').value = '';
+            document.getElementById('post-content').value = '';
+            document.getElementById('post-tags').value = '';
+            document.getElementById('post-preview').innerHTML = '<p class="text-zinc-400 text-sm text-center py-8">开始输入内容后这里会显示预览...</p>';
+            selectedCategory = null;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/20');
+                btn.classList.add('border-transparent');
+            });
+            lucide.createIcons();
+        }
+
+        function hideNewPostModal() { document.getElementById('new-post-modal').classList.add('hidden'); }
+
+        function selectCategory(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.add('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/20');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/20');
+                    btn.classList.add('border-transparent');
+                }
+            });
+        }
+
+        function insertMarkdown(type) {
+            const textarea = document.getElementById('post-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            const selected = text.substring(start, end);
+
+            let insert = '';
+            switch (type) {
+                case 'bold': insert = `**${selected || '粗体文本'}**`; break;
+                case 'italic': insert = `*${selected || '斜体文本'}*`; break;
+                case 'code': insert = `\`${selected || '代码'}\``; break;
+                case 'codeblock': insert = `\n\`\`\`\n${selected || '代码块'}\n\`\`\`\n`; break;
+                case 'link': insert = `[${selected || '链接文本'}](url)`; break;
+                case 'image': insert = `![${selected || '图片描述'}](url)`; break;
+                case 'list': insert = `\n- ${selected || '列表项1'}\n- 列表项2\n- 列表项3`; break;
+                case 'quote': insert = `\n> ${selected || '引用内容'}`; break;
+            }
+
+            textarea.value = text.substring(0, start) + insert + text.substring(end);
+            textarea.focus();
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const content = document.getElementById('post-content').value;
+            const preview = document.getElementById('post-preview');
+            if (content.trim()) {
+                preview.innerHTML = marked.parse(content);
+                preview.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
+            } else {
+                preview.innerHTML = '<p class="text-zinc-400 text-sm text-center py-8">开始输入内容后这里会显示预览...</p>';
+            }
+        }
+
+        document.getElementById('post-content').addEventListener('input', updatePreview);
+
+        async function submitPost() {
+            const title = document.getElementById('post-title').value.trim();
+            const content = document.getElementById('post-content').value.trim();
+            const tagsStr = document.getElementById('post-tags').value.trim();
+            const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t).slice(0, 5) : [];
+
+            if (!title) { alert('请输入标题'); return; }
+            if (!selectedCategory) { alert('请选择分类'); return; }
+            if (!content) { alert('请输入内容'); return; }
+
+            // 检查发帖权限
+            try {
+                const settingsDoc = await db.collection('itlab_settings').doc('general').get();
+                if (settingsDoc.exists) {
+                    const settings = settingsDoc.data();
+                    const postPermission = settings.postPermission || 'all';
+
+                    if (postPermission === 'admin') {
+                        // 检查是否是管理员
+                        const userDoc = await db.collection('itlab_users').doc(currentUser.uid).get();
+                        if (!userDoc.exists || !userDoc.data().isAdmin) {
+                            alert('只有管理员可以发帖');
+                            return;
+                        }
+                    } else if (postPermission === 'invite-only') {
+                        // 检查是否使用邀请码注册（这里简化处理，实际可以检查用户注册方式）
+                        // 暂时允许所有用户发帖
+                    }
+                }
+            } catch (e) {
+                console.warn('Failed to check post permission:', e);
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '发布中...';
+
+            try {
+                await db.collection('itlab_posts').add({
+                    title, content, category: selectedCategory, tags,
+                    authorId: currentUser.uid,
+                    authorName: currentUser.displayName || currentUser.email.split('@')[0],
+                    authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
+                    likes: 0, likedBy: [], commentCount: 0,
+                    isPinned: false, isFeatured: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                hideNewPostModal();
+                loadPosts(true);
+            } catch (e) {
+                alert('发布失败: ' + e.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '发布帖子';
+            }
+        }
+
+        function filterByCategory(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.category-card').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = 'category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-brand-500 shadow-lg shadow-brand-500/10 text-center transition-all hover:scale-[1.02]';
+                } else {
+                    btn.className = 'category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-brand-500 shadow-sm hover:shadow-lg text-center transition-all hover:scale-[1.02]';
+                }
+            });
+            loadPosts(true);
+        }
+
+        function sortPosts(sort) {
+            currentSort = sort;
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                if (btn.dataset.sort === sort) {
+                    btn.className = 'sort-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400';
+                } else {
+                    btn.className = 'sort-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all';
+                }
+            });
+            loadPosts(true);
+        }
+
+        function searchPosts() {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(() => { loadPosts(true); }, 300);
+        }
+
+        async function loadPosts(reset = false) {
+            if (isLoading) return;
+            isLoading = true;
+
+            if (reset) {
+                lastDoc = null;
+                document.getElementById('posts-list').innerHTML = `
+                    <div class="text-center py-20">
+                        <div class="w-16 h-16 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <i data-lucide="loader-2" class="animate-spin text-brand-500" size="24"></i>
+                        </div>
+                        <p class="text-zinc-400 text-sm">正在加载帖子...</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+
+            try {
+                // 只使用单字段排序，避免复合索引问题
+                let query = db.collection('itlab_posts');
+
+                switch (currentSort) {
+                    case 'newest': query = query.orderBy('createdAt', 'desc'); break;
+                    case 'popular': query = query.orderBy('likes', 'desc'); break;
+                    case 'active': query = query.orderBy('commentCount', 'desc'); break;
+                }
+
+                if (lastDoc) { query = query.startAfter(lastDoc); }
+                query = query.limit(100); // 获取更多数据用于客户端过滤
+
+                const snapshot = await query.get();
+                let posts = [];
+                snapshot.forEach(doc => { posts.push({ id: doc.id, ...doc.data() }); });
+
+                // 客户端过滤分类
+                if (currentFilter !== 'all') {
+                    posts = posts.filter(p => p.category === currentFilter);
+                }
+
+                // 客户端搜索
+                const searchTerm = document.getElementById('search-input').value.toLowerCase();
+                if (searchTerm) {
+                    posts = posts.filter(p =>
+                        p.title.toLowerCase().includes(searchTerm) ||
+                        p.content.toLowerCase().includes(searchTerm) ||
+                        (p.tags && p.tags.some(t => t.toLowerCase().includes(searchTerm)))
+                    );
+                }
+
+                // 分页
+                const displayPosts = posts.slice(0, POSTS_PER_PAGE);
+
+                if (snapshot.docs.length > 0) { lastDoc = snapshot.docs[snapshot.docs.length - 1]; }
+
+                renderPosts(displayPosts, reset);
+
+                const loadMore = document.getElementById('load-more');
+                if (posts.length > POSTS_PER_PAGE || snapshot.docs.length === 100) {
+                    loadMore.classList.remove('hidden');
+                } else {
+                    loadMore.classList.add('hidden');
+                }
+            } catch (e) {
+                console.error('Failed to load posts:', e);
+                document.getElementById('posts-list').innerHTML = `
+                    <div class="text-center py-20 text-red-400">
+                        <i data-lucide="alert-circle" size="32" class="inline-block mb-4"></i>
+                        <p class="text-sm">加载失败，请刷新重试</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+            isLoading = false;
+        }
+
+        function loadMorePosts() { loadPosts(false); }
+
+        function renderPosts(posts, replace = false) {
+            const container = document.getElementById('posts-list');
+
+            if (posts.length === 0 && replace) {
+                container.innerHTML = `
+                    <div class="text-center py-20">
+                        <div class="w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="message-square" size="32" class="text-zinc-300 dark:text-zinc-700"></i>
+                        </div>
+                        <p class="text-zinc-500 font-bold mb-2">暂无帖子</p>
+                        <p class="text-zinc-400 text-sm">快来发布第一个帖子吧！</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const html = posts.map(post => {
+                const cat = CATEGORIES[post.category] || CATEGORIES.other;
+                const timeAgo = getTimeAgo(post.createdAt?.toDate());
+                const isLiked = currentUser && post.likedBy?.includes(currentUser.uid);
+
+                return `
+                    <div class="group bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-xl hover:shadow-brand-500/5 transition-all cursor-pointer" onclick="showPostDetail('${post.id}')">
+                        <div class="p-5 md:p-6">
+                            <div class="flex items-start gap-4">
+                                <img src="${post.authorAvatar}" alt="" class="w-11 h-11 rounded-xl flex-shrink-0 object-cover">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-2.5 flex-wrap">
+                                        ${post.isPinned ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">📌 置顶</span>' : ''}
+                                        ${post.isFeatured ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400 border border-brand-200 dark:border-brand-800">⭐ 精华</span>' : ''}
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${cat.color}-100 text-${cat.color}-600 dark:bg-${cat.color}-900/30 dark:text-${cat.color}-400">${cat.name}</span>
+                                    </div>
+                                    <h3 class="text-base font-bold mb-2 group-hover:text-brand-500 transition-colors line-clamp-2">${post.title}</h3>
+                                    <p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-3 leading-relaxed">${getPreviewText(post.content)}</p>
+                                    ${post.tags && post.tags.length > 0 ? `
+                                        <div class="flex flex-wrap gap-1.5 mb-3">
+                                            ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex items-center gap-5 text-xs text-zinc-400">
+                                        <span class="font-medium text-zinc-600 dark:text-zinc-300">${post.authorName}</span>
+                                        <span>${timeAgo}</span>
+                                        <div class="flex items-center gap-1.5 ${isLiked ? 'text-red-500' : ''}">
+                                            <i data-lucide="heart" size="13" class="${isLiked ? 'fill-current' : ''}"></i>
+                                            <span>${post.likes || 0}</span>
+                                        </div>
+                                        <div class="flex items-center gap-1.5">
+                                            <i data-lucide="message-square" size="13"></i>
+                                            <span>${post.commentCount || 0}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (replace) { container.innerHTML = html; } else { container.innerHTML += html; }
+            lucide.createIcons();
+        }
+
+        async function showPostDetail(postId) {
+            currentPostId = postId;
+            const modal = document.getElementById('post-detail-modal');
+            const contentDiv = document.getElementById('post-detail-content');
+
+            modal.classList.remove('hidden');
+            contentDiv.innerHTML = `
+                <div class="text-center py-20">
+                    <div class="w-16 h-16 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                        <i data-lucide="loader-2" class="animate-spin text-brand-500" size="24"></i>
+                    </div>
+                    <p class="text-zinc-400 text-sm">正在加载...</p>
+                </div>
+            `;
+            lucide.createIcons();
+
+            try {
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (!postDoc.exists) { contentDiv.innerHTML = '<div class="text-center py-20 text-red-400">帖子不存在</div>'; return; }
+
+                const post = postDoc.data();
+                const cat = CATEGORIES[post.category] || CATEGORIES.other;
+                const isLiked = currentUser && post.likedBy?.includes(currentUser.uid);
+
+                document.getElementById('detail-title').textContent = post.title;
+
+                // 使用单字段查询，客户端排序
+                const commentsSnapshot = await db.collection('itlab_comments').where('postId', '==', postId).get();
+                let comments = [];
+                commentsSnapshot.forEach(doc => { comments.push({ id: doc.id, ...doc.data() }); });
+                // 客户端按时间排序
+                comments.sort((a, b) => {
+                    const timeA = a.createdAt?.toDate?.() || new Date(0);
+                    const timeB = b.createdAt?.toDate?.() || new Date(0);
+                    return timeA - timeB;
+                });
+
+                contentDiv.innerHTML = `
+                    <div class="p-6 md:p-8">
+                        <div class="flex items-center gap-4 mb-6">
+                            <img src="${post.authorAvatar}" alt="" class="w-14 h-14 rounded-2xl object-cover shadow-lg">
+                            <div>
+                                <p class="font-bold text-lg">${post.authorName}</p>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${cat.color}-100 text-${cat.color}-600 dark:bg-${cat.color}-900/30 dark:text-${cat.color}-400">${cat.name}</span>
+                                    <span class="text-xs text-zinc-400">${getTimeAgo(post.createdAt?.toDate())}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${post.tags && post.tags.length > 0 ? `
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        <div class="markdown-body p-6 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 mb-6">
+                            ${marked.parse(post.content)}
+                        </div>
+                        <div class="flex items-center gap-4 pb-6 border-b border-zinc-200 dark:border-white/10">
+                            <button onclick="toggleLike('${postId}')" class="flex items-center gap-2 px-5 py-2.5 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
+                                <i data-lucide="heart" size="16" class="${isLiked ? 'fill-current' : ''}"></i>
+                                <span>${post.likes || 0} 点赞</span>
+                            </button>
+                            <div class="flex items-center gap-2 text-sm text-zinc-400">
+                                <i data-lucide="message-square" size="16"></i>
+                                <span>${comments.length} 条评论</span>
+                            </div>
+                        </div>
+                        <div class="mt-8 space-y-5" id="comments-list">
+                            ${comments.length === 0 ? `
+                                <div class="text-center py-12">
+                                    <div class="w-16 h-16 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                                        <i data-lucide="message-square" size="24" class="text-zinc-300 dark:text-zinc-700"></i>
+                                    </div>
+                                    <p class="text-zinc-500 font-bold mb-1">暂无评论</p>
+                                    <p class="text-zinc-400 text-sm">快来抢沙发吧！</p>
+                                </div>
+                            ` : comments.map(comment => `
+                                <div class="flex gap-3 animate-slide-in">
+                                    <img src="${comment.authorAvatar}" alt="" class="w-9 h-9 rounded-xl flex-shrink-0 object-cover">
+                                    <div class="flex-1 p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-sm font-bold">${comment.authorName}</span>
+                                            <span class="text-xs text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
+                                        </div>
+                                        <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${comment.content}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+                contentDiv.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
+            } catch (e) {
+                console.error('Failed to load post:', e);
+                contentDiv.innerHTML = '<div class="text-center py-20 text-red-400">加载失败</div>';
+            }
+        }
+
+        function hidePostDetail() { document.getElementById('post-detail-modal').classList.add('hidden'); currentPostId = null; }
+
+        async function toggleLike(postId) {
+            if (!currentUser) { showLoginModal(); return; }
+            try {
+                const postRef = db.collection('itlab_posts').doc(postId);
+                const postDoc = await postRef.get();
+                const post = postDoc.data();
+                const likedBy = post.likedBy || [];
+                const isLiked = likedBy.includes(currentUser.uid);
+
+                if (isLiked) {
+                    await postRef.update({ likes: firebase.firestore.FieldValue.increment(-1), likedBy: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
+                } else {
+                    await postRef.update({ likes: firebase.firestore.FieldValue.increment(1), likedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid) });
+                }
+                showPostDetail(postId);
+                loadPosts(true);
+            } catch (e) { console.error('Failed to toggle like:', e); }
+        }
+
+        async function submitComment() {
+            if (!currentUser) { showLoginModal(); return; }
+            const input = document.getElementById('comment-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            try {
+                await db.collection('itlab_comments').add({
+                    postId: currentPostId, content,
+                    authorId: currentUser.uid,
+                    authorName: currentUser.displayName || currentUser.email.split('@')[0],
+                    authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                await db.collection('itlab_posts').doc(currentPostId).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
+                input.value = '';
+                showPostDetail(currentPostId);
+                loadPosts(true);
+            } catch (e) { alert('评论失败: ' + e.message); }
+        }
+
+        document.getElementById('comment-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
+        });
+
+        function getTimeAgo(date) {
+            if (!date) return '刚刚';
+            const diff = new Date() - date;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (seconds < 60) return '刚刚';
+            if (minutes < 60) return `${minutes} 分钟前`;
+            if (hours < 24) return `${hours} 小时前`;
+            if (days < 7) return `${days} 天前`;
+            if (days < 30) return `${Math.floor(days / 7)} 周前`;
+            return date.toLocaleDateString('zh-CN');
+        }
+
+        function getPreviewText(content) {
+            return content.replace(/#{1,6}\s/g, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/`{1,3}[^`]*`{1,3}/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/!\[([^\]]*)\]\([^)]+\)/g, '').replace(/\n/g, ' ').trim().substring(0, 150) + '...';
+        }
+
+        async function loadStats() {
+            try {
+                const postsSnapshot = await db.collection('itlab_posts').get();
+                document.getElementById('total-posts').textContent = postsSnapshot.size;
+            } catch (e) {}
+        }
+
+        function updateOnlineCount() {
+            document.getElementById('online-count').textContent = Math.floor(Math.random() * 20) + 5;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            loadPosts(true);
+            loadStats();
+            updateOnlineCount();
+            setInterval(updateOnlineCount, 30000);
+            initWeather(); // 初始化天气
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { hideLoginModal(); hideNewPostModal(); hidePostDetail(); }
+        });
+
+        ['login-modal', 'new-post-modal', 'post-detail-modal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) { e.currentTarget.classList.add('hidden'); }
+            });
+        });
+    </script>
+</body>
+</html>
