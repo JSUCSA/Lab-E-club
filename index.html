@@ -1322,26 +1322,48 @@
                     const user = doc.data();
                     const isUserAdmin = user.isAdmin || false;
                     const isUserMod = user.isModerator || false;
+                    const modCategories = user.modCategories || []; // 版主管理的板块
                     const roleLabel = isUserAdmin ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">管理员</span>' :
-                                    isUserMod ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">版主</span>' : '';
+                                    isUserMod ? `<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">版主${modCategories.length > 0 ? ' (' + modCategories.map(c => CATEGORIES[c]?.name || c).join(', ') + ')' : ''}</span>` : '';
+
+                    // 生成板块选择下拉菜单
+                    const categoryOptions = Object.entries(CATEGORIES).map(([id, cat]) =>
+                        `<label class="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer">
+                            <input type="checkbox" value="${id}" ${modCategories.includes(id) ? 'checked' : ''} class="mod-cat-checkbox rounded text-blue-500" data-user-id="${doc.id}">
+                            <span class="text-xs">${cat.name}</span>
+                        </label>`
+                    ).join('');
+
                     html += `
-                        <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
-                            <div class="flex items-center gap-3">
-                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-lg">
-                                <div>
-                                    <p class="text-sm font-bold">${user.displayName || '-'}</p>
-                                    <p class="text-xs text-zinc-400">${user.email || '-'}</p>
+                        <div class="p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-lg">
+                                    <div>
+                                        <p class="text-sm font-bold">${user.displayName || '-'}</p>
+                                        <p class="text-xs text-zinc-400">${user.email || '-'}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${roleLabel}
+                                    ${!isUserAdmin ? `<button onclick="toggleUserModerator('${doc.id}', ${isUserMod})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserMod ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'} hover:scale-[1.02] transition-all">
+                                        ${isUserMod ? '取消版主' : '设为版主'}
+                                    </button>` : ''}
+                                    <button onclick="toggleUserAdmin('${doc.id}', ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
+                                        ${isUserAdmin ? '取消管理员' : '设为管理员'}
+                                    </button>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                ${roleLabel}
-                                ${!isUserAdmin ? `<button onclick="toggleUserModerator('${doc.id}', ${isUserMod})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserMod ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'} hover:scale-[1.02] transition-all">
-                                    ${isUserMod ? '取消版主' : '设为版主'}
-                                </button>` : ''}
-                                <button onclick="toggleUserAdmin('${doc.id}', ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
-                                    ${isUserAdmin ? '取消管理员' : '设为管理员'}
+                            ${isUserMod ? `
+                            <div class="mt-3 pt-3 border-t border-zinc-200 dark:border-white/10">
+                                <p class="text-[10px] text-zinc-400 mb-2">管理板块：</p>
+                                <div class="flex flex-wrap gap-2">
+                                    ${categoryOptions}
+                                </div>
+                                <button onclick="saveUserModCategories('${doc.id}')" class="mt-2 px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[10px] font-bold hover:bg-blue-600 transition-colors">
+                                    保存板块权限
                                 </button>
-                            </div>
+                            </div>` : ''}
                         </div>
                     `;
                 });
@@ -1511,6 +1533,27 @@
             }
         }
 
+        // 保存用户板块版主权限
+        async function saveUserModCategories(userId) {
+            try {
+                const checkboxes = document.querySelectorAll(`.mod-cat-checkbox[data-user-id="${userId}"]`);
+                const selectedCategories = [];
+                checkboxes.forEach(cb => {
+                    if (cb.checked) selectedCategories.push(cb.value);
+                });
+
+                await db.collection('itlab_users').doc(userId).update({
+                    modCategories: selectedCategories,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                alert('板块权限保存成功！');
+                loadAdminSettings();
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
         async function toggleUserModerator(userId, currentIsMod) {
             try {
                 await db.collection('itlab_users').doc(userId).update({
@@ -1553,10 +1596,12 @@
 
         // ========== 权限检查系统 ==========
         let userRoles = { isAdmin: false, isModerator: false };
+        let currentUserData = null; // 保存当前用户完整数据
 
         async function loadUserRoles() {
             if (!currentUser) {
                 userRoles = { isAdmin: false, isModerator: false };
+                currentUserData = null;
                 return;
             }
             try {
@@ -1565,6 +1610,7 @@
                     const data = userDoc.data();
                     userRoles.isAdmin = data.isAdmin || false;
                     userRoles.isModerator = data.isModerator || false;
+                    currentUserData = data;
                 }
             } catch (e) {
                 console.warn('Failed to load user roles:', e);
@@ -1587,20 +1633,35 @@
             return currentUser && post.authorId === currentUser.uid;
         }
 
+        // 检查是否是该板块的版主
+        function isCategoryMod(category) {
+            if (!currentUser || !userRoles.isModerator) return false;
+            const userDoc = window.currentUserData;
+            if (!userDoc || !userDoc.modCategories) return false;
+            return userDoc.modCategories.includes(category);
+        }
+
         function canEditPost(post) {
             return checkIsPostAuthor(post) || checkIsAdmin();
         }
 
         function canDeletePost(post) {
-            return checkIsPostAuthor(post) || checkIsModOrAdmin();
+            if (checkIsPostAuthor(post)) return true;
+            if (checkIsAdmin()) return true;
+            if (userRoles.isModerator && isCategoryMod(post.category)) return true;
+            return false;
         }
 
-        function canPinPost() {
-            return checkIsModOrAdmin();
+        function canPinPost(post) {
+            if (checkIsAdmin()) return true;
+            if (userRoles.isModerator && isCategoryMod(post?.category)) return true;
+            return false;
         }
 
-        function canFeaturePost() {
-            return checkIsModOrAdmin();
+        function canFeaturePost(post) {
+            if (checkIsAdmin()) return true;
+            if (userRoles.isModerator && isCategoryMod(post?.category)) return true;
+            return false;
         }
 
         // ========== 帖子独立页面分享 ==========
@@ -2057,11 +2118,11 @@
                                 <i data-lucide="trash-2" size="14"></i>
                                 <span class="hidden sm:inline">删除</span>
                             </button>` : ''}
-                            ${canPinPost() ? `
+                            ${canPinPost(post) ? `
                             <button onclick="togglePin('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isPinned ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="${post.isPinned ? '取消置顶' : '置顶'}">
                                 <i data-lucide="pin" size="14"></i>
                             </button>` : ''}
-                            ${canFeaturePost() ? `
+                            ${canFeaturePost(post) ? `
                             <button onclick="toggleFeatured('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isFeatured ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-all" title="${post.isFeatured ? '取消精华' : '标记精华'}">
                                 <i data-lucide="star" size="14"></i>
                             </button>` : ''}
@@ -2080,7 +2141,9 @@
                                     <p class="text-zinc-500 font-bold mb-1">暂无评论</p>
                                     <p class="text-zinc-400 text-sm">快来抢沙发吧！</p>
                                 </div>
-                            ` : comments.filter(c => !c.parentId).map(comment => `
+                            ` : comments.filter(c => !c.parentId).map(comment => {
+                                const canDeleteComment = currentUser && (comment.authorId === currentUser.uid || checkIsModOrAdmin());
+                                return `
                                 <div class="flex gap-3 animate-slide-in">
                                     <img src="${comment.authorAvatar}" alt="" class="w-9 h-9 rounded-xl flex-shrink-0 object-cover">
                                     <div class="flex-1">
@@ -2088,13 +2151,21 @@
                                             <div class="flex items-center gap-2 mb-2">
                                                 <span class="text-sm font-bold">${comment.authorName}</span>
                                                 <span class="text-xs text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
+                                                ${canDeleteComment ? `
+                                                <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="ml-auto p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
+                                                    <i data-lucide="trash-2" size="12"></i>
+                                                </button>` : ''}
                                             </div>
                                             <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${comment.content}</p>
                                         </div>
-                                        <button onclick="setReplyTo('${comment.id}', '${comment.authorName}')" class="mt-2 ml-4 text-xs text-blue-500 hover:text-blue-600 font-bold transition-colors">
-                                            回复
-                                        </button>
-                                        ${comments.filter(r => r.parentId === comment.id).map(reply => `
+                                        <div class="flex items-center gap-3 mt-2 ml-4">
+                                            <button onclick="setReplyTo('${comment.id}', '${comment.authorName}')" class="text-xs text-blue-500 hover:text-blue-600 font-bold transition-colors">
+                                                回复
+                                            </button>
+                                        </div>
+                                        ${comments.filter(r => r.parentId === comment.id).map(reply => {
+                                            const canDeleteReply = currentUser && (reply.authorId === currentUser.uid || checkIsModOrAdmin());
+                                            return `
                                             <div class="flex gap-3 mt-3 ml-4 pl-4 border-l-2 border-zinc-200 dark:border-white/10">
                                                 <img src="${reply.authorAvatar}" alt="" class="w-7 h-7 rounded-lg flex-shrink-0 object-cover">
                                                 <div class="flex-1 p-3 rounded-xl bg-zinc-100/50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/5">
@@ -2102,14 +2173,20 @@
                                                         <span class="text-xs font-bold">${reply.authorName}</span>
                                                         ${reply.replyTo ? `<span class="text-[10px] text-zinc-400">回复 ${reply.replyTo}</span>` : ''}
                                                         <span class="text-[10px] text-zinc-400">${getTimeAgo(reply.createdAt?.toDate())}</span>
+                                                        ${canDeleteReply ? `
+                                                        <button onclick="deleteComment('${reply.id}', '${reply.postId}')" class="ml-auto p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
+                                                            <i data-lucide="trash-2" size="12"></i>
+                                                        </button>` : ''}
                                                     </div>
                                                     <p class="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">${reply.content}</p>
                                                 </div>
                                             </div>
-                                        `).join('')}
+                                            `;
+                                        }).join('')}
                                     </div>
                                 </div>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </div>
                     </div>
                 `;
@@ -2546,14 +2623,17 @@
 
         async function togglePin(postId) {
             try {
-                if (!canPinPost()) {
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (!postDoc.exists) { alert('帖子不存在'); return; }
+
+                const post = postDoc.data();
+                if (!canPinPost(post)) {
                     alert('没有置顶权限');
                     return;
                 }
 
-                const postDoc = await db.collection('itlab_posts').doc(postId).get();
                 await db.collection('itlab_posts').doc(postId).update({
-                    isPinned: !postDoc.data().isPinned
+                    isPinned: !post.isPinned
                 });
 
                 showPostDetail(postId);
@@ -2565,12 +2645,15 @@
 
         async function toggleFeatured(postId) {
             try {
-                if (!canFeaturePost()) {
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (!postDoc.exists) { alert('帖子不存在'); return; }
+
+                const post = postDoc.data();
+                if (!canFeaturePost(post)) {
                     alert('没有标记精华权限');
                     return;
                 }
 
-                const postDoc = await db.collection('itlab_posts').doc(postId).get();
                 await db.collection('itlab_posts').doc(postId).update({
                     isFeatured: !postDoc.data().isFeatured
                 });
@@ -2697,6 +2780,48 @@
                 showPostDetail(currentPostId);
                 loadPosts(true);
             } catch (e) { alert('评论失败: ' + e.message); }
+        }
+
+        // 删除评论
+        async function deleteComment(commentId, postId) {
+            if (!confirm('确定要删除这条评论吗？')) return;
+
+            try {
+                const commentDoc = await db.collection('itlab_comments').doc(commentId).get();
+                if (!commentDoc.exists) { alert('评论不存在'); return; }
+
+                const comment = commentDoc.data();
+                const isAuthor = comment.authorId === currentUser.uid;
+                const isModOrAdmin = checkIsModOrAdmin();
+
+                if (!isAuthor && !isModOrAdmin) {
+                    alert('没有删除权限');
+                    return;
+                }
+
+                // 删除评论
+                await db.collection('itlab_comments').doc(commentId).delete();
+
+                // 删除该评论的所有追评
+                const repliesSnapshot = await db.collection('itlab_comments')
+                    .where('parentId', '==', commentId)
+                    .get();
+                const batch = db.batch();
+                repliesSnapshot.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+
+                // 更新帖子评论数
+                const totalDeleted = 1 + repliesSnapshot.size;
+                await db.collection('itlab_posts').doc(postId).update({
+                    commentCount: firebase.firestore.FieldValue.increment(-totalDeleted)
+                });
+
+                // 刷新帖子详情
+                showPostDetail(postId);
+                loadPosts(true);
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
         }
 
         // 设置追评
