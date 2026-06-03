@@ -1,13 +1,14 @@
 // Firebase 配置文件 - Lab-E-club
-// 请在 Firebase Console (https://console.firebase.google.com) 创建新项目后填入配置
+// 项目: jsuitlab
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCHzMRSZofCBzFFyApFJ6BnD8z-z0DK-Yo",
+    authDomain: "jsuitlab.firebaseapp.com",
+    projectId: "jsuitlab",
+    storageBucket: "jsuitlab.firebasestorage.app",
+    messagingSenderId: "1094835319206",
+    appId: "1:1094835319206:web:048cd807045beca2fadf67",
+    measurementId: "G-J3KWVYJQER"
 };
 
 // 初始化 Firebase
@@ -16,9 +17,11 @@ firebase.initializeApp(firebaseConfig);
 // 初始化服务
 const auth = firebase.auth();
 const db = firebase.firestore();
+const analytics = firebase.analytics();
 
 // 导出到全局
 window.firebaseAuth = auth;
 window.firebaseDB = db;
+window.firebaseAnalytics = analytics;
 
-console.log('Firebase 初始化完成 - Lab-E-club');
+console.log('Firebase 初始化完成 - Lab-E-club (jsuitlab)');
