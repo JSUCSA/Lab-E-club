@@ -548,6 +548,21 @@
                     </div>
                 </div>
 
+                <!-- 板块管理 -->
+                <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                    <h3 class="font-bold text-sm mb-4">板块管理</h3>
+                    <div id="categories-list" class="space-y-2 mb-4">
+                        <!-- 板块列表 -->
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="new-cat-id" class="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 text-xs" placeholder="板块ID (英文)">
+                        <input type="text" id="new-cat-name" class="flex-1 px-3 py-2 rounded-lg bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 text-xs" placeholder="板块名称">
+                        <button onclick="addCategory()" class="px-4 py-2 rounded-lg bg-blue-500 text-white text-xs font-bold hover:bg-blue-600 transition-colors">
+                            添加
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 聊天室设置 -->
                 <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
                     <div class="flex items-center justify-between mb-4">
@@ -601,34 +616,7 @@
                 <div>
                     <label class="block text-sm font-bold text-zinc-700 dark:text-zinc-300 mb-2">选择分类</label>
                     <div class="grid grid-cols-4 gap-2" id="post-categories">
-                        <button onclick="selectCategory('sre')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-emerald-500 transition-all" data-cat="sre">
-                            <i data-lucide="server" size="20" class="mx-auto mb-1 text-emerald-500"></i>
-                            <span class="text-xs font-bold">SRE</span>
-                        </button>
-                        <button onclick="selectCategory('security')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-red-500 transition-all" data-cat="security">
-                            <i data-lucide="shield" size="20" class="mx-auto mb-1 text-red-500"></i>
-                            <span class="text-xs font-bold">网安</span>
-                        </button>
-                        <button onclick="selectCategory('devops')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-amber-500 transition-all" data-cat="devops">
-                            <i data-lucide="settings" size="20" class="mx-auto mb-1 text-amber-500"></i>
-                            <span class="text-xs font-bold">运维</span>
-                        </button>
-                        <button onclick="selectCategory('frontend')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-blue-500 transition-all" data-cat="frontend">
-                            <i data-lucide="layout" size="20" class="mx-auto mb-1 text-blue-500"></i>
-                            <span class="text-xs font-bold">前端</span>
-                        </button>
-                        <button onclick="selectCategory('backend')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-violet-500 transition-all" data-cat="backend">
-                            <i data-lucide="database" size="20" class="mx-auto mb-1 text-violet-500"></i>
-                            <span class="text-xs font-bold">后端</span>
-                        </button>
-                        <button onclick="selectCategory('ai')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-pink-500 transition-all" data-cat="ai">
-                            <i data-lucide="brain" size="20" class="mx-auto mb-1 text-pink-500"></i>
-                            <span class="text-xs font-bold">AI</span>
-                        </button>
-                        <button onclick="selectCategory('other')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-gray-500 transition-all" data-cat="other">
-                            <i data-lucide="message-circle" size="20" class="mx-auto mb-1 text-gray-500"></i>
-                            <span class="text-xs font-bold">杂谈</span>
-                        </button>
+                        <!-- 板块按钮由 JavaScript 动态生成 -->
                     </div>
                 </div>
                 <div>
@@ -701,49 +689,8 @@
         </div>
 
         <!-- Category Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-10">
-            <button onclick="filterByCategory('all')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-brand-500 shadow-lg shadow-brand-500/10 text-center transition-all hover:scale-[1.02]" data-cat="all">
-                <div class="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="grid-3x3" size="20" class="text-brand-500"></i>
-                </div>
-                <span class="text-xs font-bold text-brand-600 dark:text-brand-400">全部</span>
-            </button>
-            <button onclick="filterByCategory('sre')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-emerald-500 shadow-sm hover:shadow-lg hover:shadow-emerald-500/10 text-center transition-all hover:scale-[1.02]" data-cat="sre">
-                <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="server" size="20" class="text-emerald-500"></i>
-                </div>
-                <span class="text-xs font-bold">SRE</span>
-            </button>
-            <button onclick="filterByCategory('security')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-red-500 shadow-sm hover:shadow-lg hover:shadow-red-500/10 text-center transition-all hover:scale-[1.02]" data-cat="security">
-                <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="shield" size="20" class="text-red-500"></i>
-                </div>
-                <span class="text-xs font-bold">网安</span>
-            </button>
-            <button onclick="filterByCategory('devops')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-amber-500 shadow-sm hover:shadow-lg hover:shadow-amber-500/10 text-center transition-all hover:scale-[1.02]" data-cat="devops">
-                <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="settings" size="20" class="text-amber-500"></i>
-                </div>
-                <span class="text-xs font-bold">运维</span>
-            </button>
-            <button onclick="filterByCategory('frontend')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-blue-500 shadow-sm hover:shadow-lg hover:shadow-blue-500/10 text-center transition-all hover:scale-[1.02]" data-cat="frontend">
-                <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="layout" size="20" class="text-blue-500"></i>
-                </div>
-                <span class="text-xs font-bold">前端</span>
-            </button>
-            <button onclick="filterByCategory('backend')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-violet-500 shadow-sm hover:shadow-lg hover:shadow-violet-500/10 text-center transition-all hover:scale-[1.02]" data-cat="backend">
-                <div class="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="database" size="20" class="text-violet-500"></i>
-                </div>
-                <span class="text-xs font-bold">后端</span>
-            </button>
-            <button onclick="filterByCategory('ai')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-pink-500 shadow-sm hover:shadow-lg hover:shadow-pink-500/10 text-center transition-all hover:scale-[1.02]" data-cat="ai">
-                <div class="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center mx-auto mb-2">
-                    <i data-lucide="brain" size="20" class="text-pink-500"></i>
-                </div>
-                <span class="text-xs font-bold">AI</span>
-            </button>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-10" id="category-cards">
+            <!-- 板块卡片由 JavaScript 动态生成 -->
         </div>
 
         <!-- Toolbar -->
@@ -923,15 +870,59 @@
         let isLoading = false;
         const POSTS_PER_PAGE = 20;
 
-        const CATEGORIES = {
+        // 默认板块（可从 Firestore 加载自定义板块）
+        const DEFAULT_CATEGORIES = {
             sre: { name: 'SRE', color: 'emerald', icon: 'server' },
             security: { name: '网安', color: 'red', icon: 'shield' },
-            devops: { name: '运维', color: 'amber', icon: 'settings' },
             frontend: { name: '前端', color: 'blue', icon: 'layout' },
             backend: { name: '后端', color: 'violet', icon: 'database' },
             ai: { name: 'AI', color: 'pink', icon: 'brain' },
             other: { name: '杂谈', color: 'gray', icon: 'message-circle' }
         };
+
+        let CATEGORIES = { ...DEFAULT_CATEGORIES };
+
+        // 从 Firestore 加载自定义板块
+        async function loadCategories() {
+            try {
+                const catDoc = await db.collection('itlab_settings').doc('categories').get();
+                if (catDoc.exists) {
+                    const customCats = catDoc.data();
+                    CATEGORIES = { ...DEFAULT_CATEGORIES, ...customCats };
+                }
+            } catch (e) {
+                console.warn('Failed to load categories:', e);
+            }
+        }
+
+        // 渲染主页板块卡片
+        function renderCategoryCards() {
+            const container = document.getElementById('category-cards');
+            if (!container) return;
+
+            let html = `
+                <button onclick="filterByCategory('all')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-blue-500 shadow-lg shadow-blue-500/10 text-center transition-all hover:scale-[1.02]" data-cat="all">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-2">
+                        <i data-lucide="grid-3x3" size="20" class="text-blue-500"></i>
+                    </div>
+                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400">全部</span>
+                </button>
+            `;
+
+            Object.entries(CATEGORIES).forEach(([id, cat]) => {
+                html += `
+                    <button onclick="filterByCategory('${id}')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-${cat.color}-500 shadow-sm hover:shadow-lg hover:shadow-${cat.color}-500/10 text-center transition-all hover:scale-[1.02]" data-cat="${id}">
+                        <div class="w-10 h-10 rounded-xl bg-${cat.color}-100 dark:bg-${cat.color}-900/30 flex items-center justify-center mx-auto mb-2">
+                            <i data-lucide="${cat.icon}" size="20" class="text-${cat.color}-500"></i>
+                        </div>
+                        <span class="text-xs font-bold">${cat.name}</span>
+                    </button>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
 
         function toggleTheme() {
             const isDark = document.documentElement.classList.toggle('dark');
@@ -1313,6 +1304,10 @@
                     }
                 }
 
+                // 加载板块列表
+                await loadCategories();
+                renderCategoriesList();
+
                 // 加载用户列表
                 const usersSnapshot = await db.collection('itlab_users').orderBy('lastSeen', 'desc').limit(50).get();
                 const usersList = document.getElementById('users-list');
@@ -1421,6 +1416,98 @@
                 loadAdminSettings();
             } catch (e) {
                 alert('更新失败: ' + e.message);
+            }
+        }
+
+        // 板块管理函数
+        function renderCategoriesList() {
+            const listDiv = document.getElementById('categories-list');
+            if (!listDiv) return;
+
+            let html = '';
+            Object.entries(CATEGORIES).forEach(([id, cat]) => {
+                html += `
+                    <div class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg bg-${cat.color}-100 dark:bg-${cat.color}-900/30 flex items-center justify-center">
+                                <i data-lucide="${cat.icon}" size="14" class="text-${cat.color}-500"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold">${cat.name}</p>
+                                <p class="text-[10px] text-zinc-400">${id}</p>
+                            </div>
+                        </div>
+                        ${!DEFAULT_CATEGORIES[id] ? `
+                        <button onclick="deleteCategory('${id}')" class="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            <i data-lucide="x" size="14"></i>
+                        </button>` : ''}
+                    </div>
+                `;
+            });
+            listDiv.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        async function addCategory() {
+            const idInput = document.getElementById('new-cat-id');
+            const nameInput = document.getElementById('new-cat-name');
+            const id = idInput.value.trim().toLowerCase();
+            const name = nameInput.value.trim();
+
+            if (!id || !name) {
+                alert('请填写板块ID和名称');
+                return;
+            }
+
+            if (CATEGORIES[id]) {
+                alert('板块ID已存在');
+                return;
+            }
+
+            // 随机颜色
+            const colors = ['emerald', 'red', 'blue', 'violet', 'pink', 'amber', 'cyan'];
+            const icons = ['folder', 'tag', 'bookmark', 'hash', 'layers'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+
+            try {
+                // 更新本地
+                CATEGORIES[id] = { name, color: randomColor, icon: randomIcon };
+
+                // 保存到 Firestore
+                await db.collection('itlab_settings').doc('categories').set({
+                    [id]: { name, color: randomColor, icon: randomIcon }
+                }, { merge: true });
+
+                idInput.value = '';
+                nameInput.value = '';
+                renderCategoriesList();
+                alert('板块添加成功！');
+            } catch (e) {
+                alert('添加失败: ' + e.message);
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (DEFAULT_CATEGORIES[id]) {
+                alert('默认板块不能删除');
+                return;
+            }
+
+            if (!confirm(`确定要删除板块 "${CATEGORIES[id]?.name}" 吗？`)) return;
+
+            try {
+                delete CATEGORIES[id];
+
+                // 从 Firestore 删除
+                await db.collection('itlab_settings').doc('categories').update({
+                    [id]: firebase.firestore.FieldValue.delete()
+                });
+
+                renderCategoriesList();
+                alert('板块删除成功！');
+            } catch (e) {
+                alert('删除失败: ' + e.message);
             }
         }
 
@@ -1555,10 +1642,27 @@
             document.getElementById('post-tags').value = '';
             document.getElementById('post-preview').innerHTML = '<p class="text-zinc-400 text-sm text-center py-8">开始输入内容后这里会显示预览...</p>';
             selectedCategory = null;
-            document.querySelectorAll('.category-btn').forEach(btn => {
-                btn.classList.remove('border-brand-500', 'bg-brand-50', 'dark:bg-brand-900/20');
-                btn.classList.add('border-transparent');
+
+            // 动态生成板块选择按钮
+            renderCategoryButtons();
+
+            lucide.createIcons();
+        }
+
+        function renderCategoryButtons() {
+            const container = document.getElementById('post-categories');
+            if (!container) return;
+
+            let html = '';
+            Object.entries(CATEGORIES).forEach(([id, cat]) => {
+                html += `
+                    <button onclick="selectCategory('${id}')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-${cat.color}-500 transition-all" data-cat="${id}">
+                        <i data-lucide="${cat.icon}" size="20" class="mx-auto mb-1 text-${cat.color}-500"></i>
+                        <span class="text-xs font-bold">${cat.name}</span>
+                    </button>
+                `;
             });
+            container.innerHTML = html;
             lucide.createIcons();
         }
 
@@ -1976,15 +2080,33 @@
                                     <p class="text-zinc-500 font-bold mb-1">暂无评论</p>
                                     <p class="text-zinc-400 text-sm">快来抢沙发吧！</p>
                                 </div>
-                            ` : comments.map(comment => `
+                            ` : comments.filter(c => !c.parentId).map(comment => `
                                 <div class="flex gap-3 animate-slide-in">
                                     <img src="${comment.authorAvatar}" alt="" class="w-9 h-9 rounded-xl flex-shrink-0 object-cover">
-                                    <div class="flex-1 p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <span class="text-sm font-bold">${comment.authorName}</span>
-                                            <span class="text-xs text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
+                                    <div class="flex-1">
+                                        <div class="p-4 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span class="text-sm font-bold">${comment.authorName}</span>
+                                                <span class="text-xs text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
+                                            </div>
+                                            <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${comment.content}</p>
                                         </div>
-                                        <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${comment.content}</p>
+                                        <button onclick="setReplyTo('${comment.id}', '${comment.authorName}')" class="mt-2 ml-4 text-xs text-blue-500 hover:text-blue-600 font-bold transition-colors">
+                                            回复
+                                        </button>
+                                        ${comments.filter(r => r.parentId === comment.id).map(reply => `
+                                            <div class="flex gap-3 mt-3 ml-4 pl-4 border-l-2 border-zinc-200 dark:border-white/10">
+                                                <img src="${reply.authorAvatar}" alt="" class="w-7 h-7 rounded-lg flex-shrink-0 object-cover">
+                                                <div class="flex-1 p-3 rounded-xl bg-zinc-100/50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/5">
+                                                    <div class="flex items-center gap-2 mb-1.5">
+                                                        <span class="text-xs font-bold">${reply.authorName}</span>
+                                                        ${reply.replyTo ? `<span class="text-[10px] text-zinc-400">回复 ${reply.replyTo}</span>` : ''}
+                                                        <span class="text-[10px] text-zinc-400">${getTimeAgo(reply.createdAt?.toDate())}</span>
+                                                    </div>
+                                                    <p class="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">${reply.content}</p>
+                                                </div>
+                                            </div>
+                                        `).join('')}
                                     </div>
                                 </div>
                             `).join('')}
@@ -2541,6 +2663,9 @@
             }
         }
 
+        // 追评相关变量
+        let replyingTo = null; // { commentId, authorName }
+
         async function submitComment() {
             if (!currentUser) { showLoginModal(); return; }
             const input = document.getElementById('comment-input');
@@ -2548,22 +2673,50 @@
             if (!content) return;
 
             try {
-                await db.collection('itlab_comments').add({
+                const commentData = {
                     postId: currentPostId, content,
                     authorId: currentUser.uid,
                     authorName: currentUser.displayName || currentUser.email.split('@')[0],
                     authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                };
+
+                // 如果是追评，添加父评论信息
+                if (replyingTo) {
+                    commentData.parentId = replyingTo.commentId;
+                    commentData.replyTo = replyingTo.authorName;
+                }
+
+                await db.collection('itlab_comments').add(commentData);
                 await db.collection('itlab_posts').doc(currentPostId).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
+
+                // 清除追评状态
+                replyingTo = null;
                 input.value = '';
+                input.placeholder = '写下你的评论... (Enter 发送)';
                 showPostDetail(currentPostId);
                 loadPosts(true);
             } catch (e) { alert('评论失败: ' + e.message); }
         }
 
+        // 设置追评
+        function setReplyTo(commentId, authorName) {
+            replyingTo = { commentId, authorName };
+            const input = document.getElementById('comment-input');
+            input.placeholder = `回复 ${authorName}...`;
+            input.focus();
+        }
+
+        // 取消追评
+        function cancelReply() {
+            replyingTo = null;
+            const input = document.getElementById('comment-input');
+            input.placeholder = '写下你的评论... (Enter 发送)';
+        }
+
         document.getElementById('comment-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitComment(); }
+            if (e.key === 'Escape') { cancelReply(); }
         });
 
         function getTimeAgo(date) {
@@ -2597,8 +2750,10 @@
             document.getElementById('online-count').textContent = Math.floor(Math.random() * 20) + 5;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             lucide.createIcons();
+            await loadCategories(); // 加载板块
+            renderCategoryCards(); // 渲染板块卡片
             loadPosts(true);
             loadStats();
             updateOnlineCount();
