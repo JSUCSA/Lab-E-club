@@ -548,6 +548,20 @@
                     </div>
                 </div>
 
+                <!-- 聊天室设置 -->
+                <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-sm">实时聊天室</h3>
+                            <p class="text-xs text-zinc-400 mt-1">开启或关闭实时聊天功能</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-chat-enabled" class="sr-only peer">
+                            <div class="w-11 h-6 bg-zinc-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-zinc-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- 用户管理 -->
                 <div class="p-5 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5">
                     <h3 class="font-bold text-sm mb-4">用户管理</h3>
@@ -1278,6 +1292,7 @@
                 if (settingsDoc.exists) {
                     const settings = settingsDoc.data();
                     document.getElementById('setting-require-invite').checked = settings.requireInviteCode || false;
+                    document.getElementById('setting-chat-enabled').checked = settings.chatEnabled || false;
                     document.querySelector(`input[name="post-permission"][value="${settings.postPermission || 'all'}"]`).checked = true;
 
                     if (settings.requireInviteCode) {
@@ -1411,14 +1426,19 @@
         async function saveAdminSettings() {
             const requireInvite = document.getElementById('setting-require-invite').checked;
             const postPermission = document.querySelector('input[name="post-permission"]:checked').value;
+            const chatEnabled = document.getElementById('setting-chat-enabled').checked;
 
             try {
                 await db.collection('itlab_settings').doc('general').set({
                     requireInviteCode: requireInvite,
                     postPermission,
+                    chatEnabled,
                     updatedBy: currentUser.uid,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
+
+                // 更新聊天室状态
+                updateChatButtonState();
 
                 hideAdminSettingsModal();
                 alert('设置保存成功！');
@@ -1991,8 +2011,41 @@
             // 显示聊天按钮
             document.getElementById('chat-toggle-btn').classList.remove('hidden');
 
-            // 检查是否有聊天权限
-            await checkChatAccess();
+            // 更新按钮状态
+            await updateChatButtonState();
+        }
+
+        // 更新聊天按钮状态
+        async function updateChatButtonState() {
+            const btn = document.getElementById('chat-toggle-btn');
+            if (!btn) return;
+
+            try {
+                // 检查聊天室是否开启
+                const settingsDoc = await db.collection('itlab_settings').doc('general').get();
+                const chatEnabled = settingsDoc.exists && settingsDoc.data().chatEnabled;
+
+                if (!chatEnabled) {
+                    // 聊天室关闭状态
+                    btn.innerHTML = '<i data-lucide="message-circle" size="24"></i>';
+                    btn.classList.remove('from-blue-500', 'to-teal-600', 'shadow-blue-500/25');
+                    btn.classList.add('from-zinc-400', 'to-zinc-500', 'shadow-zinc-500/25', 'opacity-70');
+                    btn.onclick = () => alert('聊天室暂时关闭，请稍后再试');
+                } else {
+                    // 聊天室开启状态
+                    btn.innerHTML = '<i data-lucide="message-circle" size="24"></i>';
+                    btn.classList.remove('from-zinc-400', 'to-zinc-500', 'shadow-zinc-500/25', 'opacity-70');
+                    btn.classList.add('from-blue-500', 'to-teal-600', 'shadow-blue-500/25');
+                    btn.onclick = toggleChatRoom;
+
+                    // 检查用户权限
+                    await checkChatAccess();
+                }
+
+                lucide.createIcons();
+            } catch (e) {
+                console.warn('Failed to update chat button state:', e);
+            }
         }
 
         // 检查聊天权限
@@ -2041,6 +2094,17 @@
             if (!currentUser) {
                 showLoginModal();
                 return;
+            }
+
+            // 检查聊天室是否开启
+            try {
+                const settingsDoc = await db.collection('itlab_settings').doc('general').get();
+                if (!settingsDoc.exists || !settingsDoc.data().chatEnabled) {
+                    alert('聊天室暂时关闭，请稍后再试');
+                    return;
+                }
+            } catch (e) {
+                console.warn('Failed to check chat settings:', e);
             }
 
             if (!hasChatAccess) {
