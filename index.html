@@ -273,6 +273,58 @@
         -webkit-text-fill-color: transparent;
         background-clip: text;
       }
+
+      /* 评论内容 Markdown 样式 */
+      .comment-content {
+        font-size: inherit;
+        line-height: 1.6;
+      }
+      .comment-content p { margin-bottom: 0.5em; }
+      .comment-content p:last-child { margin-bottom: 0; }
+      .comment-content code {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+        padding: 0.1em 0.3em;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .dark .comment-content code {
+        background: rgba(52, 211, 153, 0.15);
+        color: #6ee7b7;
+      }
+      .comment-content pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 0.75em;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 0.5em 0;
+      }
+      .comment-content pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+      }
+      .comment-content a {
+        color: #059669;
+        text-decoration: underline;
+      }
+      .comment-content ul, .comment-content ol {
+        padding-left: 1.5em;
+        margin-bottom: 0.5em;
+      }
+      .comment-content blockquote {
+        border-left: 3px solid #10b981;
+        padding-left: 0.75em;
+        margin: 0.5em 0;
+        color: #64748b;
+      }
+      .comment-content img {
+        max-width: 100%;
+        border-radius: 8px;
+        margin: 0.5em 0;
+      }
     </style>
 </head>
 <body class="bg-zinc-50 dark:bg-[#08080c] text-zinc-900 dark:text-white transition-colors duration-300 min-h-screen">
@@ -829,7 +881,7 @@
                     </button>
                 </div>
                 <div class="flex gap-3">
-                    <textarea id="comment-input" rows="1" class="flex-1 px-4 py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm resize-none" placeholder="写下你的评论... (Ctrl+Enter 发送)" oninput="autoResize(this)"></textarea>
+                    <textarea id="comment-input" rows="1" class="flex-1 px-4 py-3 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm resize-none" placeholder="写下你的评论... 支持 Markdown (Ctrl+Enter 发送)" oninput="autoResize(this)"></textarea>
                     <button onclick="submitComment()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-teal-600 text-white text-sm font-bold hover:from-blue-600 hover:to-teal-700 transition-all shadow-lg shadow-blue-500/25 self-end">
                         发送
                     </button>
@@ -2164,17 +2216,33 @@
 
         // 盖楼模式渲染评论
         function renderComments(comments, parentId = null, depth = 0) {
-            const filtered = comments.filter(c => (c.parentId || null) === parentId);
+            let filtered = comments.filter(c => (c.parentId || null) === parentId);
             if (filtered.length === 0) return '';
+
+            // 置顶评论排在最前面
+            filtered.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return 0;
+            });
 
             return filtered.map((comment, index) => {
                 const canDelete = currentUser && (comment.authorId === currentUser.uid || checkIsModOrAdmin());
+                const canPin = currentUser && checkIsModOrAdmin();
                 const replies = comments.filter(r => r.parentId === comment.id);
                 const floorNum = comments.filter(c => !c.parentId).indexOf(comment) + 1;
                 const isTopLevel = depth === 0;
 
+                // 渲染 Markdown 内容
+                let renderedContent;
+                try {
+                    renderedContent = marked.parse(comment.content || '');
+                } catch (e) {
+                    renderedContent = escapeHtml(comment.content || '');
+                }
+
                 return `
-                    <div class="${isTopLevel ? 'mb-4' : 'mt-3'}" id="comment-${comment.id}">
+                    <div class="${isTopLevel ? 'mb-4' : 'mt-3'} ${comment.isPinned ? 'bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30' : ''}" id="comment-${comment.id}">
                         <div class="flex gap-3">
                             <!-- 头像 -->
                             <div class="flex-shrink-0">
@@ -2184,19 +2252,26 @@
                             <!-- 评论内容 -->
                             <div class="flex-1 min-w-0 group/comment">
                                 <!-- 评论头部 -->
-                                <div class="flex items-center gap-2 mb-1.5">
+                                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                    ${comment.isPinned ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">📌 置顶</span>' : ''}
                                     <span class="${isTopLevel ? 'text-sm' : 'text-xs'} font-bold text-zinc-800 dark:text-zinc-200">${comment.authorName}</span>
                                     ${isTopLevel ? `<span class="text-[10px] text-zinc-400">#${floorNum}</span>` : ''}
                                     ${comment.replyTo ? `<span class="text-[10px] text-zinc-400">回复 <span class="text-blue-500">@${comment.replyTo}</span></span>` : ''}
                                     <span class="text-[10px] text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
-                                    ${canDelete ? `
-                                    <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="ml-auto p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover/comment:opacity-100" title="删除">
-                                        <i data-lucide="trash-2" size="12"></i>
-                                    </button>` : ''}
+                                    <div class="ml-auto flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
+                                        ${canPin && isTopLevel ? `
+                                        <button onclick="toggleCommentPin('${comment.id}', ${comment.isPinned || false})" class="p-1 rounded-lg ${comment.isPinned ? 'text-amber-500 hover:text-amber-600' : 'text-zinc-400 hover:text-amber-500'} hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="${comment.isPinned ? '取消置顶' : '置顶'}">
+                                            <i data-lucide="pin" size="12"></i>
+                                        </button>` : ''}
+                                        ${canDelete ? `
+                                        <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
+                                            <i data-lucide="trash-2" size="12"></i>
+                                        </button>` : ''}
+                                    </div>
                                 </div>
 
-                                <!-- 评论内容（支持换行） -->
-                                <div class="${isTopLevel ? 'text-sm' : 'text-xs'} text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(comment.content)}</div>
+                                <!-- 评论内容（支持 Markdown） -->
+                                <div class="${isTopLevel ? 'text-sm' : 'text-xs'} text-zinc-700 dark:text-zinc-300 leading-relaxed markdown-body comment-content">${renderedContent}</div>
 
                                 <!-- 操作栏 -->
                                 <div class="flex items-center gap-3 mt-2">
@@ -2801,6 +2876,23 @@
                 showPostDetail(currentPostId);
                 loadPosts(true);
             } catch (e) { alert('评论失败: ' + e.message); }
+        }
+
+        // 置顶/取消置顶评论
+        async function toggleCommentPin(commentId, currentPinned) {
+            if (!checkIsModOrAdmin()) {
+                alert('没有置顶权限');
+                return;
+            }
+
+            try {
+                await db.collection('itlab_comments').doc(commentId).update({
+                    isPinned: !currentPinned
+                });
+                showPostDetail(currentPostId);
+            } catch (e) {
+                alert('操作失败: ' + e.message);
+            }
         }
 
         // 删除评论
