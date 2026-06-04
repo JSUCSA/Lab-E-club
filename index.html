@@ -2150,8 +2150,7 @@
                                 ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
                             </div>
                         ` : ''}
-                        <div class="markdown-body p-6 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 mb-6">
-                            ${marked.parse(post.content)}
+                        <div class="markdown-body p-6 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 mb-6" id="post-content-body">
                         </div>
                         <div class="flex items-center gap-3 flex-wrap pb-6 border-b border-zinc-200 dark:border-white/10">
                             <button onclick="toggleLike('${postId}')" class="flex items-center gap-2 px-4 py-2 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
@@ -2205,6 +2204,17 @@
                         </div>
                     </div>
                 `;
+
+                // 渲染帖子内容的 Markdown
+                const postContentBody = document.getElementById('post-content-body');
+                if (postContentBody) {
+                    try {
+                        postContentBody.innerHTML = marked.parse(post.content || '');
+                        postContentBody.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
+                    } catch (e) {
+                        postContentBody.textContent = post.content || '';
+                    }
+                }
 
                 lucide.createIcons();
                 contentDiv.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
