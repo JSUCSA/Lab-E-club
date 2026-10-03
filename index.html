@@ -50,6 +50,7 @@
 
     <!-- Marked.js for Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="assets/vendor/dompurify-3.4.16.min.js"></script>
 
     <!-- Highlight.js for code highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -925,6 +926,7 @@
         let currentSort = 'newest';
         let selectedCategory = null;
         let currentPostId = null;
+        let postDetailGeneration = 0;
         let lastDoc = null;
         let isLoading = false;
         const POSTS_PER_PAGE = 20;
@@ -970,11 +972,11 @@
 
             Object.entries(CATEGORIES).forEach(([id, cat]) => {
                 html += `
-                    <button onclick="filterByCategory('${id}')" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-${cat.color}-500 shadow-sm hover:shadow-lg hover:shadow-${cat.color}-500/10 text-center transition-all hover:scale-[1.02]" data-cat="${id}">
-                        <div class="w-10 h-10 rounded-xl bg-${cat.color}-100 dark:bg-${cat.color}-900/30 flex items-center justify-center mx-auto mb-2">
-                            <i data-lucide="${cat.icon}" size="20" class="text-${cat.color}-500"></i>
+                    <button onclick="filterByCategory(${jsArg(id)})" class="category-card p-4 rounded-2xl bg-white dark:bg-zinc-900 border-2 border-transparent hover:border-${escapeHtml(cat.color)}-500 shadow-sm hover:shadow-lg hover:shadow-${escapeHtml(cat.color)}-500/10 text-center transition-all hover:scale-[1.02]" data-cat="${escapeHtml(id)}">
+                        <div class="w-10 h-10 rounded-xl bg-${escapeHtml(cat.color)}-100 dark:bg-${escapeHtml(cat.color)}-900/30 flex items-center justify-center mx-auto mb-2">
+                            <i data-lucide="${escapeHtml(cat.icon)}" size="20" class="text-${escapeHtml(cat.color)}-500"></i>
                         </div>
-                        <span class="text-xs font-bold">${cat.name}</span>
+                        <span class="text-xs font-bold">${escapeHtml(cat.name)}</span>
                     </button>
                 `;
             });
@@ -1356,7 +1358,9 @@
                     const settings = settingsDoc.data();
                     document.getElementById('setting-require-invite').checked = settings.requireInviteCode || false;
                     document.getElementById('setting-chat-enabled').checked = settings.chatEnabled || false;
-                    document.querySelector(`input[name="post-permission"][value="${settings.postPermission || 'all'}"]`).checked = true;
+                    const mode = ['all', 'invite-only', 'moderator', 'admin'].includes(settings.postPermission) ? settings.postPermission : 'admin';
+                    const modeInput = document.querySelector(`input[name="post-permission"][value="${mode}"]`);
+                    if (modeInput) modeInput.checked = true;
 
                     if (settings.requireInviteCode) {
                         document.getElementById('invite-code-management').classList.remove('hidden');
@@ -1379,17 +1383,17 @@
                 let html = '';
                 usersSnapshot.forEach(doc => {
                     const user = doc.data();
-                    const isUserAdmin = user.isAdmin || false;
-                    const isUserMod = user.isModerator || false;
+                    const isUserAdmin = user.isAdmin === true;
+                    const isUserMod = user.isModerator === true;
                     const modCategories = user.modCategories || []; // 版主管理的板块
                     const roleLabel = isUserAdmin ? '<span class="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">管理员</span>' :
-                                    isUserMod ? `<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">版主${modCategories.length > 0 ? ' (' + modCategories.map(c => CATEGORIES[c]?.name || c).join(', ') + ')' : ''}</span>` : '';
+                                    isUserMod ? `<span class="px-2 py-1 rounded text-[10px] font-bold bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">版主${modCategories.length > 0 ? ' (' + modCategories.map(c => escapeHtml(CATEGORIES[c]?.name || c)).join(', ') + ')' : ''}</span>` : '';
 
                     // 生成板块选择下拉菜单
                     const categoryOptions = Object.entries(CATEGORIES).map(([id, cat]) =>
                         `<label class="flex items-center gap-2 px-3 py-1.5 hover:bg-zinc-100 dark:hover:bg-white/5 cursor-pointer">
-                            <input type="checkbox" value="${id}" ${modCategories.includes(id) ? 'checked' : ''} class="mod-cat-checkbox rounded text-blue-500" data-user-id="${doc.id}">
-                            <span class="text-xs">${cat.name}</span>
+                            <input type="checkbox" value="${escapeHtml(id)}" ${modCategories.includes(id) ? 'checked' : ''} class="mod-cat-checkbox rounded text-blue-500" data-user-id="${escapeHtml(doc.id)}">
+                            <span class="text-xs">${escapeHtml(cat.name)}</span>
                         </label>`
                     ).join('');
 
@@ -1397,18 +1401,18 @@
                         <div class="p-3 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-lg">
+                                    <img src="${safeAvatar(user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=10b981&color=fff`)}" alt="" class="w-8 h-8 rounded-lg">
                                     <div>
-                                        <p class="text-sm font-bold">${user.displayName || '-'}</p>
-                                        <p class="text-xs text-zinc-400">${user.email || '-'}</p>
+                                        <p class="text-sm font-bold">${escapeHtml(user.displayName || '-')}</p>
+                                        <p class="text-xs text-zinc-400">${escapeHtml(user.email || '-')}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     ${roleLabel}
-                                    ${!isUserAdmin ? `<button onclick="toggleUserModerator('${doc.id}', ${isUserMod})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserMod ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'} hover:scale-[1.02] transition-all">
+                                    ${!isUserAdmin ? `<button onclick="toggleUserModerator(${jsArg(doc.id)}, ${isUserMod})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserMod ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'} hover:scale-[1.02] transition-all">
                                         ${isUserMod ? '取消版主' : '设为版主'}
                                     </button>` : ''}
-                                    <button onclick="toggleUserAdmin('${doc.id}', ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
+                                    <button onclick="toggleUserAdmin(${jsArg(doc.id)}, ${isUserAdmin})" class="px-3 py-1.5 rounded-lg text-[10px] font-bold ${isUserAdmin ? 'bg-zinc-100 dark:bg-white/10 text-zinc-500' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'} hover:scale-[1.02] transition-all">
                                         ${isUserAdmin ? '取消管理员' : '设为管理员'}
                                     </button>
                                 </div>
@@ -1419,7 +1423,7 @@
                                 <div class="flex flex-wrap gap-2">
                                     ${categoryOptions}
                                 </div>
-                                <button onclick="saveUserModCategories('${doc.id}')" class="mt-2 px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[10px] font-bold hover:bg-blue-600 transition-colors">
+                                <button onclick="saveUserModCategories(${jsArg(doc.id)})" class="mt-2 px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[10px] font-bold hover:bg-blue-600 transition-colors">
                                     保存板块权限
                                 </button>
                             </div>` : ''}
@@ -1457,6 +1461,7 @@
                     const ref = db.collection('itlab_invitations').doc(code);
                     batch.set(ref, {
                         code,
+                        type: 'chat',
                         isUsed: false,
                         createdBy: currentUser.uid,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1475,7 +1480,7 @@
                     </div>
                 `;
             } catch (e) {
-                codesContainer.innerHTML = `<div class="text-red-500 text-xs">生成失败: ${e.message}</div>`;
+                codesContainer.innerHTML = `<div class="text-red-500 text-xs">生成失败: ${escapeHtml(e.message)}</div>`;
             }
         }
 
@@ -1510,16 +1515,16 @@
                 html += `
                     <div class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5">
                         <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-${cat.color}-100 dark:bg-${cat.color}-900/30 flex items-center justify-center">
-                                <i data-lucide="${cat.icon}" size="14" class="text-${cat.color}-500"></i>
+                            <div class="w-8 h-8 rounded-lg bg-${escapeHtml(cat.color)}-100 dark:bg-${escapeHtml(cat.color)}-900/30 flex items-center justify-center">
+                                <i data-lucide="${escapeHtml(cat.icon)}" size="14" class="text-${escapeHtml(cat.color)}-500"></i>
                             </div>
                             <div>
-                                <p class="text-xs font-bold">${cat.name}</p>
-                                <p class="text-[10px] text-zinc-400">${id}</p>
+                                <p class="text-xs font-bold">${escapeHtml(cat.name)}</p>
+                                <p class="text-[10px] text-zinc-400">${escapeHtml(id)}</p>
                             </div>
                         </div>
                         ${!DEFAULT_CATEGORIES[id] ? `
-                        <button onclick="deleteCategory('${id}')" class="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <button onclick="deleteCategory(${jsArg(id)})" class="p-1.5 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                             <i data-lucide="x" size="14"></i>
                         </button>` : ''}
                     </div>
@@ -1695,7 +1700,7 @@
         // 检查是否是该板块的版主
         function isCategoryMod(category) {
             if (!currentUser || !userRoles.isModerator) return false;
-            const userDoc = window.currentUserData;
+            const userDoc = currentUserData;
             if (!userDoc || !userDoc.modCategories) return false;
             return userDoc.modCategories.includes(category);
         }
@@ -1726,7 +1731,7 @@
         // ========== 帖子独立页面分享 ==========
         function getShareUrl(postId) {
             const baseUrl = window.location.origin + window.location.pathname;
-            return `${baseUrl}?post=${postId}`;
+            return `${baseUrl}?post=${encodeURIComponent(postId)}`;
         }
 
         function copyShareLink(postId) {
@@ -1776,9 +1781,9 @@
             let html = '';
             Object.entries(CATEGORIES).forEach(([id, cat]) => {
                 html += `
-                    <button onclick="selectCategory('${id}')" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-${cat.color}-500 transition-all" data-cat="${id}">
-                        <i data-lucide="${cat.icon}" size="20" class="mx-auto mb-1 text-${cat.color}-500"></i>
-                        <span class="text-xs font-bold">${cat.name}</span>
+                    <button onclick="selectCategory(${jsArg(id)})" class="category-btn p-3 rounded-xl text-center bg-zinc-50 dark:bg-white/5 border-2 border-transparent hover:border-${escapeHtml(cat.color)}-500 transition-all" data-cat="${escapeHtml(id)}">
+                        <i data-lucide="${escapeHtml(cat.icon)}" size="20" class="mx-auto mb-1 text-${escapeHtml(cat.color)}-500"></i>
+                        <span class="text-xs font-bold">${escapeHtml(cat.name)}</span>
                     </button>
                 `;
             });
@@ -1829,7 +1834,7 @@
             const content = document.getElementById('post-content').value;
             const preview = document.getElementById('post-preview');
             if (content.trim()) {
-                preview.innerHTML = marked.parse(content);
+                preview.innerHTML = renderMarkdown(content);
                 preview.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
             } else {
                 preview.innerHTML = '<p class="text-zinc-400 text-sm text-center py-8">开始输入内容后这里会显示预览...</p>';
@@ -1873,7 +1878,10 @@
                                 }
                                 break;
                             case 'invite-only':
-                                // 暂时允许所有用户发帖
+                                if (!checkIsAdmin()) {
+                                    alert('邀请制发帖尚未配置，请联系管理员');
+                                    return;
+                                }
                                 break;
                             case 'all':
                             default:
@@ -1883,6 +1891,8 @@
                     }
                 } catch (e) {
                     console.warn('Failed to check post permission:', e);
+                    alert('无法验证发帖权限，请稍后重试');
+                    return;
                 }
             }
 
@@ -2052,33 +2062,33 @@
                 const isLiked = currentUser && post.likedBy?.includes(currentUser.uid);
 
                 return `
-                    <div class="group bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-xl hover:shadow-brand-500/5 transition-all cursor-pointer" onclick="showPostDetail('${post.id}')">
+                    <div class="group bg-white dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-700 hover:shadow-xl hover:shadow-brand-500/5 transition-all cursor-pointer" onclick="showPostDetail(${jsArg(post.id)})">
                         <div class="p-5 md:p-6">
                             <div class="flex items-start gap-4">
-                                <img src="${post.authorAvatar}" alt="" class="w-11 h-11 rounded-xl flex-shrink-0 object-cover">
+                                <img src="${safeAvatar(post.authorAvatar)}" alt="" class="w-11 h-11 rounded-xl flex-shrink-0 object-cover">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-2.5 flex-wrap">
                                         ${post.isPinned ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">📌 置顶</span>' : ''}
                                         ${post.isFeatured ? '<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400 border border-brand-200 dark:border-brand-800">⭐ 精华</span>' : ''}
-                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${cat.color}-100 text-${cat.color}-600 dark:bg-${cat.color}-900/30 dark:text-${cat.color}-400">${cat.name}</span>
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${escapeHtml(cat.color)}-100 text-${escapeHtml(cat.color)}-600 dark:bg-${escapeHtml(cat.color)}-900/30 dark:text-${escapeHtml(cat.color)}-400">${escapeHtml(cat.name)}</span>
                                     </div>
-                                    <h3 class="text-base font-bold mb-2 group-hover:text-brand-500 transition-colors line-clamp-2">${post.title}</h3>
-                                    <p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-3 leading-relaxed">${getPreviewText(post.content)}</p>
+                                    <h3 class="text-base font-bold mb-2 group-hover:text-brand-500 transition-colors line-clamp-2">${escapeHtml(post.title)}</h3>
+                                    <p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 mb-3 leading-relaxed">${escapeHtml(getPreviewText(post.content))}</p>
                                     ${post.tags && post.tags.length > 0 ? `
                                         <div class="flex flex-wrap gap-1.5 mb-3">
-                                            ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                            ${post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                     <div class="flex items-center gap-5 text-xs text-zinc-400">
-                                        <span class="font-medium text-zinc-600 dark:text-zinc-300">${post.authorName}</span>
-                                        <span>${timeAgo}</span>
+                                        <span class="font-medium text-zinc-600 dark:text-zinc-300">${escapeHtml(post.authorName)}</span>
+                                        <span>${escapeHtml(timeAgo)}</span>
                                         <div class="flex items-center gap-1.5 ${isLiked ? 'text-red-500' : ''}">
                                             <i data-lucide="heart" size="13" class="${isLiked ? 'fill-current' : ''}"></i>
-                                            <span>${post.likes || 0}</span>
+                                            <span>${escapeHtml(post.likes || 0)}</span>
                                         </div>
                                         <div class="flex items-center gap-1.5">
                                             <i data-lucide="message-square" size="13"></i>
-                                            <span>${post.commentCount || 0}</span>
+                                            <span>${escapeHtml(post.commentCount || 0)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -2093,7 +2103,10 @@
         }
 
         async function showPostDetail(postId) {
+            if (!postId) return;
+            if (currentPostId !== postId) replyingTo = null;
             currentPostId = postId;
+            const generation = ++postDetailGeneration;
             const modal = document.getElementById('post-detail-modal');
             const contentDiv = document.getElementById('post-detail-content');
 
@@ -2114,6 +2127,7 @@
 
             try {
                 const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                if (generation !== postDetailGeneration || currentPostId !== postId || modal.classList.contains('hidden')) return;
                 if (!postDoc.exists) { contentDiv.innerHTML = '<div class="text-center py-20 text-red-400">帖子不存在</div>'; return; }
 
                 const post = postDoc.data();
@@ -2124,6 +2138,7 @@
 
                 // 使用单字段查询，客户端排序
                 const commentsSnapshot = await db.collection('itlab_comments').where('postId', '==', postId).get();
+                if (generation !== postDetailGeneration || currentPostId !== postId || modal.classList.contains('hidden')) return;
                 let comments = [];
                 commentsSnapshot.forEach(doc => { comments.push({ id: doc.id, ...doc.data() }); });
                 // 客户端按时间排序
@@ -2136,52 +2151,52 @@
                 contentDiv.innerHTML = `
                     <div class="p-6 md:p-8">
                         <div class="flex items-center gap-4 mb-6">
-                            <img src="${post.authorAvatar}" alt="" class="w-14 h-14 rounded-2xl object-cover shadow-lg">
+                            <img src="${safeAvatar(post.authorAvatar)}" alt="" class="w-14 h-14 rounded-2xl object-cover shadow-lg">
                             <div>
-                                <p class="font-bold text-lg">${post.authorName}</p>
+                                <p class="font-bold text-lg">${escapeHtml(post.authorName)}</p>
                                 <div class="flex items-center gap-3 mt-1">
-                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${cat.color}-100 text-${cat.color}-600 dark:bg-${cat.color}-900/30 dark:text-${cat.color}-400">${cat.name}</span>
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-${escapeHtml(cat.color)}-100 text-${escapeHtml(cat.color)}-600 dark:bg-${escapeHtml(cat.color)}-900/30 dark:text-${escapeHtml(cat.color)}-400">${escapeHtml(cat.name)}</span>
                                     <span class="text-xs text-zinc-400">${getTimeAgo(post.createdAt?.toDate())}</span>
                                 </div>
                             </div>
                         </div>
                         ${post.tags && post.tags.length > 0 ? `
                             <div class="flex flex-wrap gap-2 mb-6">
-                                ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                ${post.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                             </div>
                         ` : ''}
                         <div class="markdown-body p-6 rounded-2xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 mb-6" id="post-content-body">
                         </div>
                         <div class="flex items-center gap-3 flex-wrap pb-6 border-b border-zinc-200 dark:border-white/10">
-                            <button onclick="toggleLike('${postId}')" class="flex items-center gap-2 px-4 py-2 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
+                            <button onclick="toggleLike(${jsArg(postId)})" class="flex items-center gap-2 px-4 py-2 rounded-xl ${isLiked ? 'bg-red-50 dark:bg-red-900/20 text-red-500 border border-red-200 dark:border-red-800' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500 border border-transparent'} hover:bg-red-100 dark:hover:bg-red-900/30 transition-all text-sm font-bold">
                                 <i data-lucide="heart" size="16" class="${isLiked ? 'fill-current' : ''}"></i>
-                                <span>${post.likes || 0}</span>
+                                <span>${escapeHtml(post.likes || 0)}</span>
                             </button>
                             <div class="flex items-center gap-2 text-sm text-zinc-400">
                                 <i data-lucide="message-square" size="16"></i>
                                 <span>${comments.length}</span>
                             </div>
                             <div class="flex-1"></div>
-                            <button onclick="copyShareLink('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 text-xs font-bold hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" title="分享">
+                            <button onclick="copyShareLink(${jsArg(postId)})" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 dark:bg-white/5 text-zinc-500 text-xs font-bold hover:bg-zinc-200 dark:hover:bg-white/10 transition-all" title="分享">
                                 <i data-lucide="share-2" size="14"></i>
                                 <span class="hidden sm:inline">分享</span>
                             </button>
                             ${canEditPost(post) ? `
-                            <button onclick="editPost('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all" title="编辑">
+                            <button onclick="editPost(${jsArg(postId)})" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all" title="编辑">
                                 <i data-lucide="edit" size="14"></i>
                                 <span class="hidden sm:inline">编辑</span>
                             </button>` : ''}
                             ${canDeletePost(post) ? `
-                            <button onclick="deletePost('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" title="删除">
+                            <button onclick="deletePost(${jsArg(postId)})" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-500 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-all" title="删除">
                                 <i data-lucide="trash-2" size="14"></i>
                                 <span class="hidden sm:inline">删除</span>
                             </button>` : ''}
                             ${canPinPost(post) ? `
-                            <button onclick="togglePin('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isPinned ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="${post.isPinned ? '取消置顶' : '置顶'}">
+                            <button onclick="togglePin(${jsArg(postId)})" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isPinned ? 'bg-amber-100 dark:bg-amber-900/20 text-amber-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-all" title="${post.isPinned ? '取消置顶' : '置顶'}">
                                 <i data-lucide="pin" size="14"></i>
                             </button>` : ''}
                             ${canFeaturePost(post) ? `
-                            <button onclick="toggleFeatured('${postId}')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isFeatured ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-all" title="${post.isFeatured ? '取消精华' : '标记精华'}">
+                            <button onclick="toggleFeatured(${jsArg(postId)})" class="flex items-center gap-1.5 px-3 py-2 rounded-xl ${post.isFeatured ? 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600' : 'bg-zinc-100 dark:bg-white/5 text-zinc-500'} text-xs font-bold hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-all" title="${post.isFeatured ? '取消精华' : '标记精华'}">
                                 <i data-lucide="star" size="14"></i>
                             </button>` : ''}
                         </div>
@@ -2199,7 +2214,7 @@
                                     <p class="text-zinc-500 font-bold mb-1">暂无评论</p>
                                     <p class="text-zinc-400 text-sm">快来抢沙发吧！</p>
                                 </div>
-                            ` : renderComments(comments)}
+                            ` : renderComments(comments, null, 0, post.category)}
 
                         </div>
                     </div>
@@ -2209,7 +2224,7 @@
                 const postContentBody = document.getElementById('post-content-body');
                 if (postContentBody) {
                     try {
-                        postContentBody.innerHTML = marked.parse(post.content || '');
+                        postContentBody.innerHTML = renderMarkdown(post.content || '');
                         postContentBody.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
                     } catch (e) {
                         postContentBody.textContent = post.content || '';
@@ -2220,12 +2235,13 @@
                 contentDiv.querySelectorAll('pre code').forEach(block => { hljs.highlightElement(block); });
             } catch (e) {
                 console.error('Failed to load post:', e);
+                if (generation !== postDetailGeneration || currentPostId !== postId || modal.classList.contains('hidden')) return;
                 contentDiv.innerHTML = '<div class="text-center py-20 text-red-400">加载失败</div>';
             }
         }
 
         // 盖楼模式渲染评论
-        function renderComments(comments, parentId = null, depth = 0) {
+        function renderComments(comments, parentId = null, depth = 0, category = null) {
             let filtered = comments.filter(c => (c.parentId || null) === parentId);
             if (filtered.length === 0) return '';
 
@@ -2237,8 +2253,8 @@
             });
 
             return filtered.map((comment, index) => {
-                const canDelete = currentUser && (comment.authorId === currentUser.uid || checkIsModOrAdmin());
-                const canPin = currentUser && checkIsModOrAdmin();
+                const canDelete = currentUser && (comment.authorId === currentUser.uid || checkIsAdmin() || isCategoryMod(category));
+                const canPin = currentUser && (checkIsAdmin() || isCategoryMod(category));
                 const replies = comments.filter(r => r.parentId === comment.id);
                 const floorNum = comments.filter(c => !c.parentId).indexOf(comment) + 1;
                 const isTopLevel = depth === 0;
@@ -2246,17 +2262,17 @@
                 // 渲染 Markdown 内容
                 let renderedContent;
                 try {
-                    renderedContent = marked.parse(comment.content || '');
+                    renderedContent = renderMarkdown(comment.content || '');
                 } catch (e) {
                     renderedContent = escapeHtml(comment.content || '');
                 }
 
                 return `
-                    <div class="${isTopLevel ? 'mb-4' : 'mt-3'} ${comment.isPinned ? 'bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30' : ''}" id="comment-${comment.id}">
+                    <div class="${isTopLevel ? 'mb-4' : 'mt-3'} ${comment.isPinned ? 'bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-3 border border-amber-200 dark:border-amber-800/30' : ''}" id="comment-${escapeHtml(comment.id)}">
                         <div class="flex gap-3">
                             <!-- 头像 -->
                             <div class="flex-shrink-0">
-                                <img src="${comment.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName || 'U')}&background=10b981&color=fff`}" alt="" class="${isTopLevel ? 'w-10 h-10' : 'w-8 h-8'} rounded-full object-cover">
+                                <img src="${safeAvatar(comment.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.authorName || 'U')}&background=10b981&color=fff`)}" alt="" class="${isTopLevel ? 'w-10 h-10' : 'w-8 h-8'} rounded-full object-cover">
                             </div>
 
                             <!-- 评论内容 -->
@@ -2264,17 +2280,17 @@
                                 <!-- 评论头部 -->
                                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                     ${comment.isPinned ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">📌 置顶</span>' : ''}
-                                    <span class="${isTopLevel ? 'text-sm' : 'text-xs'} font-bold text-zinc-800 dark:text-zinc-200">${comment.authorName}</span>
+                                    <span class="${isTopLevel ? 'text-sm' : 'text-xs'} font-bold text-zinc-800 dark:text-zinc-200">${escapeHtml(comment.authorName)}</span>
                                     ${isTopLevel ? `<span class="text-[10px] text-zinc-400">#${floorNum}</span>` : ''}
-                                    ${comment.replyTo ? `<span class="text-[10px] text-zinc-400">回复 <span class="text-blue-500">@${comment.replyTo}</span></span>` : ''}
+                                    ${comment.replyTo ? `<span class="text-[10px] text-zinc-400">回复 <span class="text-blue-500">@${escapeHtml(comment.replyTo)}</span></span>` : ''}
                                     <span class="text-[10px] text-zinc-400">${getTimeAgo(comment.createdAt?.toDate())}</span>
                                     <div class="ml-auto flex items-center gap-1 opacity-0 group-hover/comment:opacity-100 transition-opacity">
                                         ${canPin && isTopLevel ? `
-                                        <button onclick="toggleCommentPin('${comment.id}', ${comment.isPinned || false})" class="p-1 rounded-lg ${comment.isPinned ? 'text-amber-500 hover:text-amber-600' : 'text-zinc-400 hover:text-amber-500'} hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="${comment.isPinned ? '取消置顶' : '置顶'}">
+                                        <button onclick="toggleCommentPin(${jsArg(comment.id)}, ${!!comment.isPinned})" class="p-1 rounded-lg ${comment.isPinned ? 'text-amber-500 hover:text-amber-600' : 'text-zinc-400 hover:text-amber-500'} hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="${comment.isPinned ? '取消置顶' : '置顶'}">
                                             <i data-lucide="pin" size="12"></i>
                                         </button>` : ''}
                                         ${canDelete ? `
-                                        <button onclick="deleteComment('${comment.id}', '${comment.postId}')" class="p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
+                                        <button onclick="deleteComment(${jsArg(comment.id)}, ${jsArg(comment.postId)})" class="p-1 rounded-lg text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
                                             <i data-lucide="trash-2" size="12"></i>
                                         </button>` : ''}
                                     </div>
@@ -2285,7 +2301,7 @@
 
                                 <!-- 操作栏 -->
                                 <div class="flex items-center gap-3 mt-2">
-                                    <button onclick="setReplyTo('${comment.id}', '${comment.authorName}')" class="text-[11px] text-zinc-400 hover:text-blue-500 font-bold transition-colors">
+                                    <button onclick="setReplyTo(${jsArg(comment.id)}, ${jsArg(comment.authorName)})" class="text-[11px] text-zinc-400 hover:text-blue-500 font-bold transition-colors">
                                         回复
                                     </button>
                                 </div>
@@ -2295,7 +2311,7 @@
                                 <div class="mt-3 pl-4 border-l-2 border-zinc-200 dark:border-white/10 relative">
                                     <!-- 连接线装饰 -->
                                     <div class="absolute left-[-2px] top-0 w-0.5 h-4 bg-blue-500 rounded-full"></div>
-                                    ${renderComments(comments, comment.id, depth + 1)}
+                                    ${renderComments(comments, comment.id, depth + 1, category)}
                                 </div>
                                 ` : ''}
                             </div>
@@ -2306,6 +2322,7 @@
         }
 
         function hidePostDetail() {
+            postDetailGeneration++;
             document.getElementById('post-detail-modal').classList.add('hidden');
             document.body.style.overflow = '';
             currentPostId = null;
@@ -2496,23 +2513,24 @@
                     return;
                 }
 
-                // 标记邀请码已使用
-                await db.collection('itlab_invitations').doc(code).update({
-                    isUsed: true,
-                    usedBy: currentUser.uid,
-                    usedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                // 授权用户聊天权限
-                await db.collection('itlab_chat_access').doc(currentUser.uid).set({
-                    userId: currentUser.uid,
-                    authorizedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    usedCode: code
-                });
-
-                // 更新用户文档
-                await db.collection('itlab_users').doc(currentUser.uid).update({
-                    chatAuthorized: true
+                // 邀请码领取、权限建立和个人状态一起提交，避免部分成功。
+                const inviteRef = db.collection('itlab_invitations').doc(code);
+                const accessRef = db.collection('itlab_chat_access').doc(currentUser.uid);
+                const userRef = db.collection('itlab_users').doc(currentUser.uid);
+                await db.runTransaction(async transaction => {
+                    const freshInvite = await transaction.get(inviteRef);
+                    if (!freshInvite.exists || freshInvite.data().type !== 'chat' || freshInvite.data().isUsed) {
+                        throw new Error('邀请码不存在、类型不符或已被使用');
+                    }
+                    transaction.update(inviteRef, {
+                        isUsed: true, usedBy: currentUser.uid,
+                        usedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    transaction.set(accessRef, {
+                        userId: currentUser.uid, usedCode: code,
+                        authorizedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    transaction.update(userRef, { chatAuthorized: true });
                 });
 
                 hasChatAccess = true;
@@ -2589,11 +2607,11 @@
 
             return `
                 <div class="flex gap-2.5 ${isMe ? 'flex-row-reverse' : ''}">
-                    <img src="${msg.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.userName || 'U')}&background=10b981&color=fff`}" alt="" class="w-8 h-8 rounded-full flex-shrink-0">
+                    <img src="${safeAvatar(msg.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.userName || 'U')}&background=10b981&color=fff`)}" alt="" class="w-8 h-8 rounded-full flex-shrink-0">
                     <div class="max-w-[70%]">
                         <div class="flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}">
-                            <span class="text-xs font-bold text-zinc-600 dark:text-zinc-300">${msg.userName || '匿名'}</span>
-                            <span class="text-[10px] text-zinc-400">${time}</span>
+                            <span class="text-xs font-bold text-zinc-600 dark:text-zinc-300">${escapeHtml(msg.userName || '匿名')}</span>
+                            <span class="text-[10px] text-zinc-400">${escapeHtml(time)}</span>
                         </div>
                         <div class="px-3.5 py-2 rounded-2xl text-sm ${isMe ? 'bg-gradient-to-r from-blue-500 to-teal-600 text-white rounded-tr-md' : 'bg-zinc-100 dark:bg-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-md'}">
                             ${escapeHtml(msg.content)}
@@ -2604,10 +2622,30 @@
         }
 
         // HTML 转义
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[c]);
+        }
+
+        // Encode a JavaScript string literal inside an HTML event attribute.
+        function jsArg(value) { return escapeHtml(JSON.stringify(String(value ?? ''))); }
+
+        function safeAvatar(value) {
+            try {
+                const url = new URL(String(value || ''));
+                if (url.protocol === 'https:') return escapeHtml(url.href);
+            } catch (_) {}
+            return 'https://ui-avatars.com/api/?name=U&background=10b981&color=fff';
+        }
+
+        function renderMarkdown(value) {
+            if (!window.DOMPurify) return escapeHtml(value);
+            return DOMPurify.sanitize(marked.parse(String(value ?? '')), {
+                USE_PROFILES: { html: true }, SANITIZE_NAMED_PROPS: true,
+                FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select'],
+                FORBID_ATTR: ['style']
+            });
         }
 
         // 发送消息
@@ -2720,14 +2758,15 @@
                     return;
                 }
 
-                // 删除帖子
-                await db.collection('itlab_posts').doc(postId).delete();
-
-                // 删除相关评论
+                // 先停止新增评论，再删除子评论和帖子；中断后可安全重试。
+                await db.collection('itlab_posts').doc(postId).update({ deleting: true });
                 const commentsSnapshot = await db.collection('itlab_comments').where('postId', '==', postId).get();
-                const batch = db.batch();
-                commentsSnapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
+                const ordered = commentsSnapshot.docs.sort((a, b) =>
+                    Number(!!b.data().parentId) - Number(!!a.data().parentId));
+                for (const comment of ordered) {
+                    await deleteCommentWithCounter(comment.id, postId);
+                }
+                await db.collection('itlab_posts').doc(postId).delete();
 
                 hidePostDetail();
                 loadPosts(true);
@@ -2784,7 +2823,7 @@
         // ========== 帖子独立页面分享 ==========
         function getShareUrl(postId) {
             const baseUrl = window.location.origin + window.location.pathname;
-            return `${baseUrl}?post=${postId}`;
+            return `${baseUrl}?post=${encodeURIComponent(postId)}`;
         }
 
         function copyShareLink(postId) {
@@ -2865,15 +2904,20 @@
         // 追评相关变量
         let replyingTo = null; // { commentId, authorName }
 
+        let submittingComment = false;
         async function submitComment() {
+            if (submittingComment) return;
             if (!currentUser) { showLoginModal(); return; }
             const input = document.getElementById('comment-input');
             const content = input.value.trim();
-            if (!content) return;
+            if (!content || !currentPostId) return;
+            const submittedPostId = currentPostId;
+            const submittedGeneration = postDetailGeneration;
+            submittingComment = true;
 
             try {
                 const commentData = {
-                    postId: currentPostId, content,
+                    postId: submittedPostId, content,
                     authorId: currentUser.uid,
                     authorName: currentUser.displayName || currentUser.email.split('@')[0],
                     authorAvatar: currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || currentUser.email)}&background=10b981&color=fff`,
@@ -2886,26 +2930,40 @@
                     commentData.replyTo = replyingTo.authorName;
                 }
 
-                await db.collection('itlab_comments').add(commentData);
-                await db.collection('itlab_posts').doc(currentPostId).update({ commentCount: firebase.firestore.FieldValue.increment(1) });
+                const postRef = db.collection('itlab_posts').doc(submittedPostId);
+                const commentRef = db.collection('itlab_comments').doc();
+                await db.runTransaction(async transaction => {
+                    const post = await transaction.get(postRef);
+                    if (!post.exists) throw new Error('帖子已删除');
+                    transaction.set(commentRef, commentData);
+                    transaction.update(postRef, {
+                        commentCount: (post.data().commentCount || 0) + 1,
+                        lastCommentId: commentRef.id
+                    });
+                });
 
-                // 清除追评状态
-                replyingTo = null;
-                input.value = '';
-                input.placeholder = '写下你的评论... (Enter 发送)';
-                showPostDetail(currentPostId);
+                // 只刷新仍在查看的原帖，避免异步完成重新打开已关闭的页面。
+                if (currentPostId === submittedPostId && postDetailGeneration === submittedGeneration
+                    && !document.getElementById('post-detail-modal').classList.contains('hidden')) {
+                    replyingTo = null;
+                    if (input.value.trim() === content) input.value = '';
+                    input.placeholder = '写下你的评论... (Enter 发送)';
+                    showPostDetail(submittedPostId);
+                }
                 loadPosts(true);
             } catch (e) { alert('评论失败: ' + e.message); }
+            finally { submittingComment = false; }
         }
 
         // 置顶/取消置顶评论
         async function toggleCommentPin(commentId, currentPinned) {
-            if (!checkIsModOrAdmin()) {
-                alert('没有置顶权限');
-                return;
-            }
-
             try {
+                const comment = await db.collection('itlab_comments').doc(commentId).get();
+                const post = await db.collection('itlab_posts').doc(comment.data().postId).get();
+                if (!checkIsAdmin() && !isCategoryMod(post.data().category)) {
+                    alert('没有置顶权限');
+                    return;
+                }
                 await db.collection('itlab_comments').doc(commentId).update({
                     isPinned: !currentPinned
                 });
@@ -2913,6 +2971,35 @@
             } catch (e) {
                 alert('操作失败: ' + e.message);
             }
+        }
+
+        async function deleteCommentTree(commentId, postId) {
+            const commentRef = db.collection('itlab_comments').doc(commentId);
+            const existing = await commentRef.get();
+            if (!existing.exists) return;
+            if (existing.data().postId !== postId) throw new Error('评论所属帖子不一致');
+            await commentRef.update({ deleting: true, deletingBy: currentUser.uid });
+            const replies = await db.collection('itlab_comments').where('parentId', '==', commentId).get();
+            for (const reply of replies.docs) {
+                await deleteCommentTree(reply.id, postId);
+            }
+            await deleteCommentWithCounter(commentId, postId);
+        }
+
+        // 单条评论和计数使用一个事务；规则核对实际创建/删除的评论。
+        async function deleteCommentWithCounter(commentId, postId) {
+            const commentRef = db.collection('itlab_comments').doc(commentId);
+            const postRef = db.collection('itlab_posts').doc(postId);
+            await db.runTransaction(async transaction => {
+                const comment = await transaction.get(commentRef);
+                const post = await transaction.get(postRef);
+                if (!comment.exists) return;
+                if (!post.exists || comment.data().postId !== postId) throw new Error('帖子状态不一致');
+                const count = post.data().commentCount || 0;
+                if (count < 1) throw new Error('评论计数需要管理员校正');
+                transaction.delete(commentRef);
+                transaction.update(postRef, { commentCount: count - 1, lastCommentId: commentId });
+            });
         }
 
         // 删除评论
@@ -2925,29 +3012,16 @@
 
                 const comment = commentDoc.data();
                 const isAuthor = comment.authorId === currentUser.uid;
-                const isModOrAdmin = checkIsModOrAdmin();
+                const postDoc = await db.collection('itlab_posts').doc(postId).get();
+                const isModOrAdmin = checkIsAdmin() || isCategoryMod(postDoc.data().category);
 
                 if (!isAuthor && !isModOrAdmin) {
                     alert('没有删除权限');
                     return;
                 }
 
-                // 删除评论
-                await db.collection('itlab_comments').doc(commentId).delete();
-
-                // 删除该评论的所有追评
-                const repliesSnapshot = await db.collection('itlab_comments')
-                    .where('parentId', '==', commentId)
-                    .get();
-                const batch = db.batch();
-                repliesSnapshot.forEach(doc => batch.delete(doc.ref));
-                await batch.commit();
-
-                // 更新帖子评论数
-                const totalDeleted = 1 + repliesSnapshot.size;
-                await db.collection('itlab_posts').doc(postId).update({
-                    commentCount: firebase.firestore.FieldValue.increment(-totalDeleted)
-                });
+                // 冻结父评论后递归删除整棵回复树；中断后可重试。
+                await deleteCommentTree(commentId, postId);
 
                 // 刷新帖子详情
                 showPostDetail(postId);
@@ -3044,9 +3118,13 @@
 
         ['login-modal', 'new-post-modal', 'post-detail-modal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
-                if (e.target === e.currentTarget) { e.currentTarget.classList.add('hidden'); }
+                if (e.target === e.currentTarget) {
+                    if (id === 'post-detail-modal') hidePostDetail();
+                    else e.currentTarget.classList.add('hidden');
+                }
             });
         });
     </script>
 </body>
 </html>
+

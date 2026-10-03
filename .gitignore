@@ -28,3 +28,10 @@ build/
 # Firebase
 .firebase/
 firebase-debug.log
+
+# Local restoration test dependencies and emulator output
+tests/node_modules/
+node_modules/
+*-debug.log
+*.log
+

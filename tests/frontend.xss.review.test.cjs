@@ -1,0 +1,34 @@
+process.chdir(require('node:path').resolve(__dirname, '..'));
+// Isolated real-DOM parser + vendored DOMPurify tests. No external resources loaded.
+const fs=require('fs'), assert=require('assert/strict'), {JSDOM}=require('jsdom');
+const html=fs.readFileSync('index.html','utf8');
+function extract(name) {
+ const start=new RegExp('        (?:async )?function '+name+'\\(').exec(html);assert(start,name);
+ const rest=html.slice(start.index);const line=rest.split('\n')[0];if(line.trim().endsWith('}'))return line;
+ const end=/^        }\s*$/m.exec(rest);assert(end,name);return rest.slice(0,end.index+9);
+}
+const dom=new JSDOM('<div id="posts-list"></div><div id="sink"></div>',{runScripts:'outside-only',url:'https://example.invalid/'}), w=dom.window;
+w.eval(fs.readFileSync('assets/vendor/dompurify-3.4.16.min.js','utf8'));
+w.marked=require('marked').marked;w.currentUser={uid:'u'};w.userRoles={isModerator:true,isAdmin:false};w.currentUserData={modCategories:['code']};w.getTimeAgo=()=>'';w.lucide={createIcons(){}};w.CATEGORIES={code:{name:'Code',color:'blue'},other:{name:'Other',color:'blue'}};
+for(const n of ['escapeHtml','jsArg','safeAvatar','renderMarkdown','isCategoryMod','checkIsAdmin','getPreviewText','renderPosts','renderComments','renderChatMessage']) w.eval(extract(n));
+const payload=`\"' ); window.PWNED = 1; // & <img src=x onerror=\"window.PWNED=1\">`;
+const attackMarkdown='<img src=x onerror="window.PWNED=1"><svg onload="window.PWNED=1"></svg><a href="javascript:window.PWNED=1">x</a><form id="db"><input name="currentUser"></form><div id="currentUser" style="position:fixed">text</div><script>window.PWNED=1</script>';
+function inspect(root,allowHandlers=false) {assert.equal(root.querySelectorAll('script,svg,iframe,object,embed,form,input').length,0); for(const el of root.querySelectorAll('*'))for(const a of el.attributes){if(/^on/i.test(a.name))assert(allowHandlers&&a.name==='onclick','unexpected event handler '+a.name);if(['href','src'].includes(a.name))assert(!/^\s*(javascript|vbscript|data):/i.test(a.value),'unsafe URI');}assert(!w.PWNED);}
+let sink=w.document.getElementById('sink');sink.innerHTML=w.renderMarkdown(attackMarkdown);inspect(sink);assert(!sink.querySelector('#currentUser'));assert(!sink.querySelector('[style]'));console.log('PASS markdown removes script, event handler, javascript URL, SVG, form, styles, and namespaces named DOM');
+sink.innerHTML=w.renderMarkdown('## Heading\n\n**bold** and [safe](https://example.invalid/)\n\n```js\nconst a=1;\n```');assert(sink.querySelector('h2'));assert(sink.querySelector('strong'));assert(sink.querySelector('pre code'));console.log('PASS normal markdown formatting retained');
+const purifier=w.DOMPurify;delete w.DOMPurify;sink.innerHTML=w.renderMarkdown(attackMarkdown);assert.equal(sink.children.length,0);w.DOMPurify=purifier;console.log('PASS sanitizer missing fails closed to plain text');
+for(const value of ['javascript:alert(1)','data:image/svg+xml,x','http://example.invalid/x',`https://example.invalid/x\" onerror=\"window.PWNED=1`]){sink.innerHTML=`<img src="${w.safeAvatar(value)}">`;inspect(sink);assert(sink.querySelector('img').src.startsWith('https:'));}console.log('PASS safe avatar URL filtering and attribute encoding');
+const comment={id:payload,postId:payload,authorId:'other',authorName:payload,replyTo:payload,authorAvatar:payload,content:attackMarkdown,isPinned:'false);window.PWNED=1;//'};
+sink.innerHTML=w.renderComments([comment],null,0,'code');inspect(sink,true);const calls=[];for(const n of ['toggleCommentPin','deleteComment','setReplyTo'])w[n]=(...args)=>calls.push([n,...args]);for(const btn of sink.querySelectorAll('[onclick]'))w.Function(btn.getAttribute('onclick'))();assert(!w.PWNED);assert.equal(calls.length,3);assert(calls.every(c=>c[1]===payload));assert.equal(calls.find(c=>c[0]==='setReplyTo')[2],payload);assert.equal(calls.find(c=>c[0]==='deleteComment')[2],payload);assert.equal(typeof calls.find(c=>c[0]==='toggleCommentPin')[2],'boolean');console.log('PASS comment author/doc IDs/parent IDs/booleans escape safely and handlers round-trip');
+w.renderPosts([{id:payload,authorName:payload,authorAvatar:payload,title:payload,content:attackMarkdown,tags:[payload],category:'code',likes:payload,commentCount:payload}],true);let postRoot=w.document.getElementById('posts-list');inspect(postRoot,true);let got;w.showPostDetail=id=>got=id;w.Function(postRoot.querySelector('[onclick]').getAttribute('onclick'))();assert.equal(got,payload);assert(!w.PWNED);console.log('PASS post title/tags/name/counters/ID/avatar rendering and handler');
+sink.innerHTML=w.renderChatMessage({userId:'other',userName:payload,userAvatar:payload,content:payload});inspect(sink);assert(sink.textContent.includes(payload));console.log('PASS chat username/avatar/content rendering');
+w.DEFAULT_CATEGORIES={}; w.CATEGORIES={[payload]:{name:payload,color:payload,icon:payload}};
+for(const [name,id,handler] of [['renderCategoryCards','category-cards','filterByCategory'],['renderCategoryButtons','post-categories','selectCategory'],['renderCategoriesList','categories-list','deleteCategory']]) {
+ const box=w.document.createElement('div');box.id=id;w.document.body.append(box);w.eval(extract(name));w[name]();inspect(box,true);let args=[];w[handler]=v=>args.push(v);for(const b of box.querySelectorAll('[onclick]'))w.Function(b.getAttribute('onclick'))();assert(args.includes(payload));assert(!w.PWNED);
+}
+console.log('PASS category cards/selectors/admin list escape IDs/names/colors/icons and round-trip handlers');
+(async()=>{
+ for(const id of ['users-list','setting-require-invite','setting-chat-enabled','invite-code-management']){let el=w.document.createElement('div');el.id=id;w.document.body.append(el);}
+ w.loadCategories=async()=>{};w.alert=e=>{throw Error(e)};w.db={collection:name=>({doc:()=>({get:async()=>({exists:true,data:()=>({chatEnabled:false,postPermission:payload})})}),orderBy:()=>({limit:()=>({get:async()=>({empty:false,forEach:fn=>fn({id:payload,data:()=>({displayName:payload,email:payload,photoURL:payload,isModerator:true,isAdmin:'false);window.PWNED=1;//',modCategories:[payload]})})})})})})};
+ w.eval(extract('loadAdminSettings'));await w.loadAdminSettings();const box=w.document.getElementById('users-list');for(const i of box.querySelectorAll('input')){assert.equal(i.type,'checkbox');assert.equal(i.value,payload);i.remove();}inspect(box,true);const captured=[];for(const n of ['toggleUserModerator','toggleUserAdmin','saveUserModCategories'])w[n]=(...args)=>captured.push(args);for(const b of box.querySelectorAll('[onclick]'))w.Function(b.getAttribute('onclick'))();assert.equal(captured.length,3);assert(captured.every(a=>a[0]===payload));assert.equal(captured[1][1],false);assert(!w.PWNED);console.log('PASS admin user names/emails/avatar/mod categories/UIDs/role booleans safely rendered');w.close();
+})().catch(e=>{console.error(e);process.exitCode=1;w.close();});

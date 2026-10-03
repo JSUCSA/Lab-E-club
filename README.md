@@ -349,58 +349,11 @@ npx serve .
 
 ## 🔒 Firestore 安全规则
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // 帖子：所有人可读，登录用户可创建
-    match /itlab_posts/{postId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && 
-        (resource.data.authorId == request.auth.uid || 
-         get(/databases/$(database)/documents/itlab_users/$(request.auth.uid)).data.isAdmin == true);
-    }
-    
-    // 评论：所有人可读，登录用户可创建
-    match /itlab_comments/{commentId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && 
-        (resource.data.authorId == request.auth.uid || 
-         get(/databases/$(database)/documents/itlab_users/$(request.auth.uid)).data.isAdmin == true);
-    }
-    
-    // 用户：所有人可读，仅本人可写
-    match /itlab_users/{userId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // 设置：所有人可读，仅管理员可写
-    match /itlab_settings/{doc} {
-      allow read: if true;
-      allow write: if request.auth != null && 
-        get(/databases/$(database)/documents/itlab_users/$(request.auth.uid)).data.isAdmin == true;
-    }
-    
-    // 邀请码
-    match /itlab_invitations/{code} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // 聊天消息
-    match /itlab_chat_messages/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null && 
-        (resource.data.userId == request.auth.uid || 
-         get(/databases/$(database)/documents/itlab_users/$(request.auth.uid)).data.isAdmin == true);
-    }
-  }
-}
-```
+生产规则以 [`firestore.rules`](./firestore.rules) 为准。不要重新启用测试模式、期限放行或整库登录用户可写。
+
+帖子与评论公开可读；个人资料仅本人和管理员可读，邀请码和聊天数据受单独权限约束。发帖范围和聊天室开关继续由现有设置控制。评论计数与评论写入必须原子提交，客户端不能自行修改角色。
+
+部署顺序、测试方法和验证范围见 [`docs/RESTORATION.md`](./docs/RESTORATION.md)。
 
 ---
 
@@ -449,3 +402,4 @@ service cloud.firestore {
   <strong>江苏大学 ITLab 技术社区</strong><br>
   <em>SRE · 网安 · 前端 · 后端 · AI</em>
 </p>
+
